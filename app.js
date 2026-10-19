@@ -85,18 +85,18 @@ function actualizarMonedaUI() {
   const symbol = monedaActual === 'USD' ? 'USD$' : 'RD$';
   const label = monedaActual === 'USD' ? 'Monto en Números (USD $)' : 'Monto en Números (RD$)';
   
-  document.getElementById('labelMontoMoneda').textContent = label;
-  document.getElementById('prefixMontoMoneda').textContent = symbol;
-  document.getElementById('previewSimboloMoneda').textContent = symbol;
+  const labelEl = document.getElementById('labelMontoMoneda');
+  const prefixEl = document.getElementById('prefixMontoMoneda');
+  const previewSimboloEl = document.getElementById('previewSimboloMoneda');
+
+  if (labelEl) labelEl.textContent = label;
+  if (prefixEl) prefixEl.textContent = symbol;
+  if (previewSimboloEl) previewSimboloEl.textContent = symbol;
 }
 
 /**
  * ========================================================
  * CONVERSOR DE NÚMEROS A LETRAS EN ESPAÑOL
- * Reglas solicitadas:
- * - Texto exacto en palabras para los centavos (ej: 60 -> SESENTA CENTAVOS)
- * - Si centavos es 0, no se describe
- * - Soporte para RD$ (PESOS) y USD (DÓLARES)
  * ========================================================
  */
 function numeroALetras(num, moneda = monedaActual) {
@@ -229,19 +229,23 @@ function regenerarMontoLetras() {
  * Control de campos dinámicos de Forma de Pago
  */
 function togglePagoCampos() {
-  const tipo = document.querySelector('input[name="tipoPago"]:checked').value;
+  const radioChecked = document.querySelector('input[name="tipoPago"]:checked');
+  const tipo = radioChecked ? radioChecked.value : 'efectivo';
+
   const chequeDiv = document.getElementById('chequeCampos');
   const bancoDiv = document.getElementById('bancoCampos');
 
-  if (tipo === 'cheque') {
-    chequeDiv.classList.remove('hidden');
-    bancoDiv.classList.add('hidden');
-  } else if (tipo === 'banco') {
-    chequeDiv.classList.add('hidden');
-    bancoDiv.classList.remove('hidden');
-  } else {
-    chequeDiv.classList.add('hidden');
-    bancoDiv.classList.add('hidden');
+  if (chequeDiv && bancoDiv) {
+    if (tipo === 'cheque') {
+      chequeDiv.classList.remove('hidden');
+      bancoDiv.classList.add('hidden');
+    } else if (tipo === 'banco') {
+      chequeDiv.classList.add('hidden');
+      bancoDiv.classList.remove('hidden');
+    } else {
+      chequeDiv.classList.add('hidden');
+      bancoDiv.classList.add('hidden');
+    }
   }
   sincronizarVistaPrevia();
 }
@@ -249,96 +253,124 @@ function togglePagoCampos() {
 /**
  * ========================================================
  * SINCRONIZACIÓN DE LA VISTA PREVIA DEL TALONARIO
+ * Robusta ante cualquier valor nulo o indefinido
  * ========================================================
  */
 function sincronizarVistaPrevia() {
-  const num = document.getElementById('inputNumero').value || '0001';
-  document.getElementById('previewNumero').textContent = `No. ${num}`;
-  document.getElementById('receiptNumberDisplay').textContent = num;
+  try {
+    const num = document.getElementById('inputNumero').value || '0001';
+    const previewNumEl = document.getElementById('previewNumero');
+    const receiptNumDispEl = document.getElementById('receiptNumberDisplay');
+    if (previewNumEl) previewNumEl.textContent = `No. ${num}`;
+    if (receiptNumDispEl) receiptNumDispEl.textContent = num;
 
-  // Fecha
-  const fechaVal = document.getElementById('inputFecha').value;
-  if (fechaVal) {
-    const parts = fechaVal.split('-');
-    document.getElementById('previewDia').textContent = parts[2] || '--';
-    document.getElementById('previewMes').textContent = parts[1] || '--';
-    document.getElementById('previewAno').textContent = parts[0] || '----';
-  } else {
-    document.getElementById('previewDia').textContent = '--';
-    document.getElementById('previewMes').textContent = '--';
-    document.getElementById('previewAno').textContent = '----';
+    // Fecha
+    const fechaVal = document.getElementById('inputFecha').value;
+    const diaEl = document.getElementById('previewDia');
+    const mesEl = document.getElementById('previewMes');
+    const anoEl = document.getElementById('previewAno');
+    if (fechaVal) {
+      const parts = fechaVal.split('-');
+      if (diaEl) diaEl.textContent = parts[2] || '--';
+      if (mesEl) mesEl.textContent = parts[1] || '--';
+      if (anoEl) anoEl.textContent = parts[0] || '----';
+    } else {
+      if (diaEl) diaEl.textContent = '--';
+      if (mesEl) mesEl.textContent = '--';
+      if (anoEl) anoEl.textContent = '----';
+    }
+
+    // Hemos recibido de
+    const recibidoDeEl = document.getElementById('previewRecibidoDe');
+    if (recibidoDeEl) {
+      recibidoDeEl.textContent = document.getElementById('inputRecibidoDe').value || '';
+    }
+
+    // Monto numérico
+    const montoVal = parseFloat(document.getElementById('inputMonto').value);
+    const montoNumEl = document.getElementById('previewMontoNum');
+    if (montoNumEl) {
+      if (!isNaN(montoVal) && montoVal > 0) {
+        montoNumEl.textContent = montoVal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } else {
+        montoNumEl.textContent = '0.00';
+      }
+    }
+
+    // Símbolo de moneda
+    actualizarMonedaUI();
+
+    // La suma de (letras)
+    const montoLetrasEl = document.getElementById('previewMontoLetras');
+    if (montoLetrasEl) {
+      montoLetrasEl.textContent = document.getElementById('inputMontoLetras').value || '';
+    }
+
+    // Concepto (distribuir en dos líneas si es extenso)
+    const concepto = document.getElementById('inputConcepto').value || '';
+    const c1 = document.getElementById('previewConcepto1');
+    const c2 = document.getElementById('previewConcepto2');
+
+    if (c1 && c2) {
+      if (concepto.length > 55) {
+        const corte = concepto.lastIndexOf(' ', 55);
+        const pos = corte > 20 ? corte : 55;
+        c1.textContent = concepto.substring(0, pos);
+        c2.textContent = concepto.substring(pos).trim();
+      } else {
+        c1.textContent = concepto;
+        c2.textContent = '';
+      }
+    }
+
+    // Forma de Pago
+    const radioChecked = document.querySelector('input[name="tipoPago"]:checked');
+    const tipo = radioChecked ? radioChecked.value : 'efectivo';
+
+    const chkEfectivo = document.getElementById('checkEfectivoIcon');
+    const chkCheque = document.getElementById('checkChequeIcon');
+    const pEfectivo = document.getElementById('previewEfectivoVal');
+    const pCheque = document.getElementById('previewChequeNoVal');
+    const pBanco = document.getElementById('previewBancoVal');
+
+    const symbol = monedaActual === 'USD' ? 'USD$' : 'RD$';
+
+    if (tipo === 'efectivo') {
+      if (chkEfectivo) chkEfectivo.innerHTML = '✔';
+      if (chkCheque) chkCheque.innerHTML = '';
+      if (pEfectivo) pEfectivo.textContent = `${symbol} ` + (isNaN(montoVal) ? '0.00' : montoVal.toLocaleString('es-DO', { minimumFractionDigits: 2 }));
+      if (pCheque) pCheque.textContent = '';
+      if (pBanco) pBanco.textContent = '';
+    } else if (tipo === 'cheque') {
+      if (chkEfectivo) chkEfectivo.innerHTML = '';
+      if (chkCheque) chkCheque.innerHTML = '✔';
+      if (pEfectivo) pEfectivo.textContent = '';
+      if (pCheque) pCheque.textContent = document.getElementById('inputChequeNo').value || 'S/N';
+      if (pBanco) pBanco.textContent = document.getElementById('inputChequeBanco').value || '';
+    } else if (tipo === 'banco') {
+      if (chkEfectivo) chkEfectivo.innerHTML = '';
+      if (chkCheque) chkCheque.innerHTML = '';
+      if (pEfectivo) pEfectivo.textContent = '';
+      if (pCheque) pCheque.textContent = 'TRANSF.';
+      if (pBanco) pBanco.textContent = document.getElementById('inputBancoDirecto').value || 'TRANSFERENCIA BANCARIA';
+    }
+
+    // Firmas
+    const pEntregado = document.getElementById('previewEntregadoNombre');
+    const pRecibido = document.getElementById('previewRecibidoNombre');
+    if (pEntregado) pEntregado.textContent = document.getElementById('inputEntregadoPor').value || '';
+    if (pRecibido) pRecibido.textContent = document.getElementById('inputRecibidoPor').value || '';
+
+    // Sincronizar copia si está activa
+    actualizarCopiaPreview();
+  } catch (err) {
+    console.error('Error al sincronizar vista previa:', err);
   }
-
-  // Hemos recibido de
-  document.getElementById('previewRecibidoDe').textContent = document.getElementById('inputRecibidoDe').value || '';
-
-  // Monto numérico
-  const montoVal = parseFloat(document.getElementById('inputMonto').value);
-  if (!isNaN(montoVal) && montoVal > 0) {
-    document.getElementById('previewMontoNum').textContent = montoVal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  } else {
-    document.getElementById('previewMontoNum').textContent = '0.00';
-  }
-
-  // La suma de (letras)
-  document.getElementById('previewMontoLetras').textContent = document.getElementById('inputMontoLetras').value || '';
-
-  // Concepto (distribuir en dos líneas si es extenso)
-  const concepto = document.getElementById('inputConcepto').value || '';
-  const c1 = document.getElementById('previewConcepto1');
-  const c2 = document.getElementById('previewConcepto2');
-
-  if (concepto.length > 55) {
-    const corte = concepto.lastIndexOf(' ', 55);
-    const pos = corte > 20 ? corte : 55;
-    c1.textContent = concepto.substring(0, pos);
-    c2.textContent = concepto.substring(pos).trim();
-  } else {
-    c1.textContent = concepto;
-    c2.textContent = '';
-  }
-
-  // Forma de Pago
-  const tipo = document.querySelector('input[name="tipoPago"]:checked').value;
-  const chkEfectivo = document.getElementById('checkEfectivoIcon');
-  const chkCheque = document.getElementById('checkChequeIcon');
-  const pEfectivo = document.getElementById('previewEfectivoVal');
-  const pCheque = document.getElementById('previewChequeNoVal');
-  const pBanco = document.getElementById('previewBancoVal');
-
-  const symbol = monedaActual === 'USD' ? 'USD$' : 'RD$';
-
-  if (tipo === 'efectivo') {
-    chkEfectivo.innerHTML = '✔';
-    chkCheque.innerHTML = '';
-    pEfectivo.textContent = `${symbol} ` + (isNaN(montoVal) ? '0.00' : montoVal.toLocaleString('es-DO', { minimumFractionDigits: 2 }));
-    pCheque.textContent = '';
-    pBanco.textContent = '';
-  } else if (tipo === 'cheque') {
-    chkEfectivo.innerHTML = '';
-    chkCheque.innerHTML = '✔';
-    pEfectivo.textContent = '';
-    pCheque.textContent = document.getElementById('inputChequeNo').value || 'S/N';
-    pBanco.textContent = document.getElementById('inputChequeBanco').value || '';
-  } else if (tipo === 'banco') {
-    chkEfectivo.innerHTML = '';
-    chkCheque.innerHTML = '';
-    pEfectivo.textContent = '';
-    pCheque.textContent = 'TRANSF.';
-    pBanco.textContent = document.getElementById('inputBancoDirecto').value || 'TRANSFERENCIA BANCARIA';
-  }
-
-  // Firmas
-  document.getElementById('previewEntregadoNombre').textContent = document.getElementById('inputEntregadoPor').value || '';
-  document.getElementById('previewRecibidoNombre').textContent = document.getElementById('inputRecibidoPor').value || '';
-
-  // Sincronizar copia si está activa
-  actualizarCopiaPreview();
 }
 
 /**
  * ========================================================
- * LIMPIAR TANTO FORMULARIO COMO VISTA PREVIA (Punto 1)
+ * LIMPIAR TANTO FORMULARIO COMO VISTA PREVIA
  * ========================================================
  */
 function limpiarFormulario() {
@@ -356,10 +388,12 @@ function limpiarFormulario() {
   document.getElementById('inputRecibidoPor').value = '';
 
   // Restablecer forma de pago a Efectivo
-  document.querySelector('input[name="tipoPago"][value="efectivo"]').checked = true;
+  document.querySelectorAll('input[name="tipoPago"]').forEach(rd => rd.checked = false);
+  const rdEfectivo = document.querySelector('input[name="tipoPago"][value="efectivo"]');
+  if (rdEfectivo) rdEfectivo.checked = true;
   togglePagoCampos();
 
-  // 2. Establecer siguiente número correlativo automáticamente (Punto 7)
+  // 2. Establecer siguiente número correlativo automáticamente
   const siguienteNumero = obtenerSiguienteNumeroRecibo();
   document.getElementById('inputNumero').value = siguienteNumero;
   document.getElementById('receiptNumberDisplay').textContent = siguienteNumero;
@@ -384,7 +418,7 @@ function limpiarFormulario() {
   document.getElementById('checkChequeIcon').innerHTML = '';
 
   actualizarCopiaPreview();
-  mostrarToast('🧹 Formulario y vista previa limpiados correctamente.');
+  mostrarToast('🧹 Formulario y vista previa listos para un nuevo recibo.');
 }
 
 /**
@@ -397,23 +431,24 @@ function toggleOriginalYCopia() {
   const wrapperTag = document.getElementById('wrapperTagRecibo1');
 
   if (isChecked) {
-    cutLine.classList.remove('hidden');
-    copiaPreview.classList.remove('hidden');
+    if (cutLine) cutLine.classList.remove('hidden');
+    if (copiaPreview) copiaPreview.classList.remove('hidden');
     if (wrapperTag) wrapperTag.classList.remove('hidden');
     actualizarCopiaPreview();
   } else {
-    cutLine.classList.add('hidden');
-    copiaPreview.classList.add('hidden');
+    if (cutLine) cutLine.classList.add('hidden');
+    if (copiaPreview) copiaPreview.classList.add('hidden');
     if (wrapperTag) wrapperTag.classList.add('hidden');
   }
 }
 
 function actualizarCopiaPreview() {
-  const isChecked = document.getElementById('checkOriginalYCopia').checked;
-  if (!isChecked) return;
+  const checkEl = document.getElementById('checkOriginalYCopia');
+  if (!checkEl || !checkEl.checked) return;
 
   const original = document.getElementById('reciboPreview');
   const copia = document.getElementById('reciboCopiaPreview');
+  if (!original || !copia) return;
   
   copia.innerHTML = original.innerHTML;
   
@@ -425,7 +460,7 @@ function actualizarCopiaPreview() {
 
 /**
  * ========================================================
- * CÁLCULO DEL SIGUIENTE NÚMERO CORRELATIVO (Punto 7)
+ * CÁLCULO DEL SIGUIENTE NÚMERO CORRELATIVO
  * ========================================================
  */
 function obtenerSiguienteNumeroRecibo() {
@@ -435,7 +470,7 @@ function obtenerSiguienteNumeroRecibo() {
   let maxDigits = 4;
 
   recibos.forEach(r => {
-    const clean = (r.numero || '').replace(/[^0-9]/g, '');
+    const clean = (r.numero || '').toString().replace(/[^0-9]/g, '');
     if (clean) {
       const num = parseInt(clean, 10);
       if (!isNaN(num) && num > maxNum) {
@@ -466,14 +501,17 @@ function guardarRecibo() {
   const monto = parseFloat(document.getElementById('inputMonto').value) || 0;
   const montoLetras = document.getElementById('inputMontoLetras').value.trim();
   const concepto = document.getElementById('inputConcepto').value.trim();
-  const tipoPago = document.querySelector('input[name="tipoPago"]:checked').value;
+  
+  const radioPagoChecked = document.querySelector('input[name="tipoPago"]:checked');
+  const tipoPago = radioChecked(radioPagoChecked) ? radioPagoChecked.value : 'efectivo';
+
   const chequeNo = document.getElementById('inputChequeNo').value.trim();
   const chequeBanco = document.getElementById('inputChequeBanco').value.trim();
   const bancoDirecto = document.getElementById('inputBancoDirecto').value.trim();
   const entregadoPor = document.getElementById('inputEntregadoPor').value.trim();
   const recibidoPor = document.getElementById('inputRecibidoPor').value.trim();
 
-  // Validaciones básicas
+  // Validaciones
   if (!cliente) {
     alert('⚠️ Por favor escribe el nombre de quien se recibió el pago ("Hemos recibido de").');
     document.getElementById('inputRecibidoDe').focus();
@@ -486,7 +524,7 @@ function guardarRecibo() {
     return;
   }
 
-  // Bloqueo temporal para evitar guardar 30 veces el mismo recibo
+  // Bloqueo temporal para evitar clics repetidos
   guardandoRecibo = true;
   const btnGuardar = document.getElementById('btnGuardarRecibo');
   if (btnGuardar) {
@@ -500,7 +538,6 @@ function guardarRecibo() {
   if (!reciboActualId) {
     const yaExiste = recibos.find(r => r.numero === numeroFinal);
     if (yaExiste) {
-      // Si ya existe el número, asignar automáticamente el correlativo siguiente
       const siguienteCorrelativo = obtenerSiguienteNumeroRecibo();
       const deseaContinuar = confirm(
         `El recibo #${numeroFinal} ya fue utilizado anteriormente por ${yaExiste.cliente}.\n\n` +
@@ -536,26 +573,28 @@ function guardarRecibo() {
   };
 
   if (reciboActualId) {
-    // Actualizar recibo existente
     const index = recibos.findIndex(r => r.id === reciboActualId);
     if (index !== -1) {
       recibos[index] = receiptData;
     }
     mostrarToast(`✅ Recibo #${numeroFinal} actualizado exitosamente.`);
   } else {
-    // Insertar nuevo recibo al principio de la lista
     recibos.unshift(receiptData);
+    reciboActualId = receiptData.id;
     mostrarToast(`✅ Recibo #${numeroFinal} guardado exitosamente.`);
   }
 
   guardarEnLocalStorage();
   renderHistorial();
+  
+  // Mantener los datos en pantalla para que el usuario pueda descargarlo o imprimirlo
+  document.getElementById('formReceiptTag').innerHTML = `Guardado (#<span>${numeroFinal}</span>)`;
+  sincronizarVistaPrevia();
+  desbloquearBotonGuardar();
+}
 
-  // Avanzar automáticamente al siguiente número y limpiar para el próximo cliente
-  setTimeout(() => {
-    limpiarFormulario();
-    desbloquearBotonGuardar();
-  }, 400);
+function radioChecked(el) {
+  return el !== null && el !== undefined;
 }
 
 function desbloquearBotonGuardar() {
@@ -577,21 +616,41 @@ function cargarRecibo(id) {
   if (!r) return;
 
   reciboActualId = r.id;
-  document.getElementById('inputNumero').value = r.numero;
-  document.getElementById('inputFecha').value = r.fecha;
-  document.getElementById('inputRecibidoDe').value = r.cliente;
-  document.getElementById('inputMonto').value = r.monto;
+  document.getElementById('inputNumero').value = r.numero || '';
+  document.getElementById('inputFecha').value = r.fecha || '';
+  document.getElementById('inputRecibidoDe').value = r.cliente || '';
+  document.getElementById('inputMonto').value = r.monto || '';
   
-  monedaActual = r.moneda || 'DOP';
+  // Normalizar moneda
+  let moneda = (r.moneda || 'DOP').toUpperCase();
+  if (moneda.includes('USD') || moneda.includes('DOL')) {
+    monedaActual = 'USD';
+  } else {
+    monedaActual = 'DOP';
+  }
+  
+  document.querySelectorAll('input[name="radioMoneda"]').forEach(rd => rd.checked = false);
   const radioMoneda = document.querySelector(`input[name="radioMoneda"][value="${monedaActual}"]`);
   if (radioMoneda) radioMoneda.checked = true;
   actualizarMonedaUI();
 
-  document.getElementById('inputMontoLetras').value = r.montoLetras;
-  document.getElementById('inputConcepto').value = r.concepto;
+  document.getElementById('inputMontoLetras').value = r.montoLetras || '';
+  document.getElementById('inputConcepto').value = r.concepto || '';
 
-  const radioPago = document.querySelector(`input[name="tipoPago"][value="${r.tipoPago}"]`);
-  if (radioPago) radioPago.checked = true;
+  // Normalizar tipo de pago
+  let tipoPago = (r.tipoPago || 'efectivo').toLowerCase();
+  if (tipoPago.includes('transf') || tipoPago.includes('banc')) tipoPago = 'banco';
+  else if (tipoPago.includes('cheq')) tipoPago = 'cheque';
+  else tipoPago = 'efectivo';
+
+  document.querySelectorAll('input[name="tipoPago"]').forEach(rd => rd.checked = false);
+  const radioPago = document.querySelector(`input[name="tipoPago"][value="${tipoPago}"]`);
+  if (radioPago) {
+    radioPago.checked = true;
+  } else {
+    const radioDef = document.querySelector('input[name="tipoPago"][value="efectivo"]');
+    if (radioDef) radioDef.checked = true;
+  }
 
   document.getElementById('inputChequeNo').value = r.chequeNo || '';
   document.getElementById('inputChequeBanco').value = r.chequeBanco || '';
@@ -600,6 +659,7 @@ function cargarRecibo(id) {
   document.getElementById('inputRecibidoPor').value = r.recibidoPor || '';
 
   document.getElementById('formReceiptTag').innerHTML = `Editando #<span>${r.numero}</span>`;
+  
   togglePagoCampos();
   sincronizarVistaPrevia();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -613,20 +673,29 @@ function duplicarRecibo(id) {
   if (!r) return;
 
   limpiarFormulario();
-  document.getElementById('inputRecibidoDe').value = r.cliente;
-  document.getElementById('inputMonto').value = r.monto;
+  document.getElementById('inputRecibidoDe').value = r.cliente || '';
+  document.getElementById('inputMonto').value = r.monto || '';
   
-  monedaActual = r.moneda || 'DOP';
+  let moneda = (r.moneda || 'DOP').toUpperCase();
+  monedaActual = (moneda.includes('USD') || moneda.includes('DOL')) ? 'USD' : 'DOP';
+
+  document.querySelectorAll('input[name="radioMoneda"]').forEach(rd => rd.checked = false);
   const radioMoneda = document.querySelector(`input[name="radioMoneda"][value="${monedaActual}"]`);
   if (radioMoneda) radioMoneda.checked = true;
   actualizarMonedaUI();
 
-  document.getElementById('inputMontoLetras').value = r.montoLetras;
-  document.getElementById('inputConcepto').value = r.concepto;
+  document.getElementById('inputMontoLetras').value = r.montoLetras || '';
+  document.getElementById('inputConcepto').value = r.concepto || '';
   document.getElementById('inputEntregadoPor').value = r.entregadoPor || '';
   document.getElementById('inputRecibidoPor').value = r.recibidoPor || '';
 
-  const radioPago = document.querySelector(`input[name="tipoPago"][value="${r.tipoPago}"]`);
+  let tipoPago = (r.tipoPago || 'efectivo').toLowerCase();
+  if (tipoPago.includes('transf') || tipoPago.includes('banc')) tipoPago = 'banco';
+  else if (tipoPago.includes('cheq')) tipoPago = 'cheque';
+  else tipoPago = 'efectivo';
+
+  document.querySelectorAll('input[name="tipoPago"]').forEach(rd => rd.checked = false);
+  const radioPago = document.querySelector(`input[name="tipoPago"][value="${tipoPago}"]`);
   if (radioPago) radioPago.checked = true;
 
   togglePagoCampos();
@@ -655,12 +724,13 @@ function eliminarRecibo(id) {
 
 /**
  * ========================================================
- * GENERACIÓN DE PDF ROBUSTA (PUNTOS 2 Y 3)
- * Utiliza html2canvas 1.4.1 + jsPDF 2.5.1 directamente.
- * Soporta 'descargar' o 'abrir' en nueva pestaña sin errores de pantalla en blanco.
+ * GENERACIÓN DE PDF ROBUSTA (html2canvas 1.4.1 + jsPDF 2.5.1)
  * ========================================================
  */
 async function generarPDFRecibo(accion = 'descargar') {
+  // Asegurar que la vista previa tenga todos los datos sincronizados
+  sincronizarVistaPrevia();
+
   const num = document.getElementById('inputNumero').value || 'recibo';
   const clienteRaw = document.getElementById('inputRecibidoDe').value || 'cliente';
   const cliente = clienteRaw.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_');
@@ -673,17 +743,14 @@ async function generarPDFRecibo(accion = 'descargar') {
 
   if (!elemento) return;
 
-  mostrarToast('⏳ Procesando documento PDF...');
+  mostrarToast('⏳ Generando PDF...');
 
-  // 1. Guardar posición de scroll original
   const origScrollX = window.scrollX;
   const origScrollY = window.scrollY;
 
-  // 2. Ir temporalmente al tope (0,0) para garantizar captura idéntica
   window.scrollTo(0, 0);
 
   try {
-    // 3. Renderizar el elemento visible con html2canvas
     const canvas = await html2canvas(elemento, {
       scale: 2,
       useCORS: true,
@@ -691,12 +758,10 @@ async function generarPDFRecibo(accion = 'descargar') {
       backgroundColor: '#ffffff'
     });
 
-    // 4. Restaurar la posición de scroll
     window.scrollTo(origScrollX, origScrollY);
 
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
 
-    // 5. Crear el documento jsPDF tamaño carta (Letter)
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -740,20 +805,23 @@ function abrirPDF() {
   generarPDFRecibo('abrir');
 }
 
+function imprimirDirecto() {
+  sincronizarVistaPrevia();
+  window.print();
+}
+
 /**
- * Acciones desde el Historial (Punto 3: Descargar o Abrir)
+ * Acciones desde el Historial
  */
 async function procesarPDFDesdeHistorial(id, accion = 'descargar') {
   cargarRecibo(id);
-  // Pequeña espera para sincronizar la vista previa
-  await new Promise(resolve => setTimeout(resolve, 150));
+  await new Promise(resolve => setTimeout(resolve, 120));
   generarPDFRecibo(accion);
 }
 
 /**
  * ========================================================
- * EXPORTACIÓN A EXCEL PROFESIONAL (Punto 6)
- * Utiliza SheetJS para generar un archivo .xlsx real y estilizado
+ * EXPORTACIÓN A EXCEL PROFESIONAL (.xlsx)
  * ========================================================
  */
 function exportarExcelProfesional() {
@@ -763,11 +831,10 @@ function exportarExcelProfesional() {
   }
 
   if (typeof XLSX === 'undefined') {
-    alert('Librería de Excel no cargada. Verifique su conexión.');
+    alert('Librería de Excel no cargada. Verifique su conexión a internet.');
     return;
   }
 
-  // 1. Estructura de filas
   const filas = recibos.map((r, idx) => ({
     'No.': idx + 1,
     'No. Recibo': r.numero,
@@ -785,7 +852,6 @@ function exportarExcelProfesional() {
 
   const worksheet = XLSX.utils.json_to_sheet(filas);
 
-  // 2. Anchos óptimos de columna
   worksheet['!cols'] = [
     { wch: 6 },  // No.
     { wch: 14 }, // No. Recibo
@@ -828,7 +894,6 @@ function cargarRecibosDesdeStorage() {
     if (data) {
       recibos = JSON.parse(data);
     } else {
-      // Migrar si existía la versión 1 anterior
       const dataV1 = localStorage.getItem('talonario_recibos_guardados_v1');
       if (dataV1) {
         recibos = JSON.parse(dataV1);
@@ -851,7 +916,6 @@ function renderHistorial(lista = recibos) {
 
   tbody.innerHTML = '';
 
-  // Actualizar estadísticas separadas por moneda
   document.getElementById('badgeCount').textContent = recibos.length;
   document.getElementById('statTotalRecibos').textContent = recibos.length;
 
@@ -897,7 +961,7 @@ function renderHistorial(lista = recibos) {
       <td class="py-3 px-3 text-slate-600 whitespace-nowrap">${formaTexto}</td>
       <td class="py-3 px-3 text-slate-500 max-w-xs truncate" title="${escapeHtml(r.concepto)}">${escapeHtml(r.concepto)}</td>
       <td class="py-3 px-3 text-center whitespace-nowrap">
-        <button onclick="cargarRecibo('${r.id}')" title="Ver / Editar" class="px-2 py-1 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded font-bold mr-1">
+        <button onclick="cargarRecibo('${r.id}')" title="Ver / Cargar en formulario" class="px-2 py-1 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded font-bold mr-1">
           ✏️ Ver
         </button>
         <button onclick="procesarPDFDesdeHistorial('${r.id}', 'descargar')" title="Descargar PDF directo" class="px-2 py-1 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded font-bold mr-1">
@@ -928,7 +992,7 @@ function filtrarHistorial() {
     return;
   }
   const filtrados = recibos.filter(r => 
-    (r.numero && r.numero.toLowerCase().includes(q)) ||
+    (r.numero && r.numero.toString().toLowerCase().includes(q)) ||
     (r.cliente && r.cliente.toLowerCase().includes(q)) ||
     (r.concepto && r.concepto.toLowerCase().includes(q)) ||
     (r.fecha && r.fecha.toLowerCase().includes(q))
