@@ -63,7 +63,7 @@
   min-height: 24px;
   padding-left: 8px;
   padding-right: 8px;
-  padding-bottom: 4px;
+  padding-bottom: 5px;
   font-weight: 700;
   font-size: 14px;
   line-height: 1.2;
@@ -107,7 +107,10 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  padding: 2px 0;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: rgba(20, 40, 82, 0.04);
 }
 
@@ -116,7 +119,17 @@
   grid-template-columns: 1fr 1fr 1fr;
   font-size: 10px;
   font-weight: 700;
+  height: 20px;
   border-bottom: 1.5px solid var(--receipt-blue);
+}
+
+.date-cols > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding-bottom: 2px; /* Eleva DIA, MES, AÑO hacia arriba para no tocar la línea inferior */
+  box-sizing: border-box;
 }
 
 .date-cols > div:not(:last-child) {
@@ -126,7 +139,7 @@
 .date-values {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  height: 26px;
+  height: 28px;
   font-size: 14px;
   font-weight: 700;
   line-height: 1;
@@ -137,7 +150,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding-bottom: 4px; /* Eleva la fecha hacia arriba para centrarla dentro del recuadro */
+  padding-bottom: 3px; /* Centrado perfecto vertical de los números de la fecha */
   box-sizing: border-box;
 }
 
@@ -169,15 +182,15 @@
   white-space: nowrap;
   margin-right: 4px;
   line-height: 1.2;
-  padding-bottom: 2px;
+  padding-bottom: 3px;
 }
 
 .payment-line {
   flex-grow: 1;
   border-bottom: 1.2px solid var(--receipt-blue);
-  min-height: 18px;
+  min-height: 20px;
   padding-left: 6px;
-  padding-bottom: 3px;
+  padding-bottom: 4px; /* Eleva el texto del monto RD$ por encima de la línea */
   font-size: 11px;
   line-height: 1.2;
   color: #0b1938;
@@ -208,15 +221,16 @@
 }
 
 .signature-name {
-  height: 22px;
-  font-size: 12px;
+  height: 26px;
+  font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: #1e293b;
   font-style: italic;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 2px;
+  padding-bottom: 6px; /* Eleva la firma (Ronald, Reyes) limpiamente por encima de la línea */
+  box-sizing: border-box;
 }
 
 .signature-line {
@@ -225,7 +239,7 @@
   text-align: center;
   font-size: 11px;
   font-weight: 700;
-  padding-top: 4px;
+  padding-top: 5px;
   letter-spacing: 0.5px;
 }
 
