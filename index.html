@@ -160,23 +160,33 @@
 
     /* Reglas de Impresión Nativa (Ctrl + P) */
     @media print {
-      body {
+      header, footer, nav, aside, .no-print {
+        display: none !important;
+      }
+      body, main {
         background: white !important;
         padding: 0 !important;
         margin: 0 !important;
+        display: block !important;
+        max-width: 100% !important;
       }
-      .no-print {
-        display: none !important;
+      .grid {
+        display: block !important;
+      }
+      .lg\:col-span-7 {
+        width: 100% !important;
+        display: block !important;
       }
       .print-area {
         display: block !important;
         width: 100% !important;
-        padding: 10mm !important;
+        padding: 8mm !important;
+        margin: 0 auto !important;
       }
       .receipt-container {
         box-shadow: none !important;
-        page-break-inside: avoid;
-        margin-bottom: 25px;
+        page-break-inside: avoid !important;
+        margin-bottom: 20px !important;
       }
       .cut-line {
         display: block !important;
@@ -1238,42 +1248,117 @@
       event.target.value = '';
     }
 
-    // DESCARGA EN PDF CON HTML2PDF
-    function descargarPDF() {
+    // DESCARGA EN PDF CON HTML2PDF (AISLADO, SIN RECORTES NI DESFASES)
+    async function descargarPDF() {
       const num = document.getElementById('inputNumero').value || 'recibo';
-      const cliente = (document.getElementById('inputRecibidoDe').value || 'cliente').replace(/[^a-zA-Z0-9]/g, '_');
+      const clienteRaw = document.getElementById('inputRecibidoDe').value || 'cliente';
+      const cliente = clienteRaw.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_');
       const filename = `Recibo_${num}_${cliente}.pdf`;
 
-      const element = document.getElementById('printArea');
-      
-      const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
-      };
-
-      // Notificación visual de carga
-      const btn = event.currentTarget || document.activeElement;
+      // Notificación visual en el botón
+      const btn = event ? (event.currentTarget || document.activeElement) : null;
       const originalText = btn ? btn.innerHTML : '';
       if (btn) btn.innerHTML = '⏳ Generando PDF...';
 
-      html2pdf().set(opt).from(element).save().then(() => {
-        if (btn) btn.innerHTML = originalText;
-      }).catch(err => {
-        console.error('Error al generar PDF:', err);
-        if (btn) btn.innerHTML = originalText;
-        alert('Se descargará mediante la opción de impresión del navegador.');
+      const isOriginalYCopia = document.getElementById('checkOriginalYCopia').checked;
+      const source = document.getElementById('reciboPreview');
+
+      // Crear un contenedor temporal limpio fijado en top: 0, left: 0
+      // Esto elimina al 100% el desfase por scroll o por columnas responsivas
+      const wrapper = document.createElement('div');
+      wrapper.id = 'tempPdfRenderWrapper';
+      wrapper.style.position = 'fixed';
+      wrapper.style.top = '0';
+      wrapper.style.left = '0';
+      wrapper.style.width = '780px';
+      wrapper.style.backgroundColor = '#ffffff';
+      wrapper.style.padding = '12px';
+      wrapper.style.zIndex = '999999';
+      wrapper.style.boxSizing = 'border-box';
+
+      // 1er Recibo (Original)
+      const clone1 = source.cloneNode(true);
+      clone1.style.boxShadow = 'none';
+      clone1.style.margin = '0 auto';
+      clone1.style.width = '100%';
+      clone1.querySelectorAll('.no-print').forEach(el => el.remove());
+
+      const wrapTag1 = clone1.querySelector('#wrapperTagRecibo1');
+      const tag1 = clone1.querySelector('#tagTipoRecibo1');
+      if (isOriginalYCopia) {
+        if (wrapTag1) wrapTag1.classList.remove('hidden');
+        if (tag1) tag1.textContent = 'ORIGINAL';
+      } else {
+        if (wrapTag1) wrapTag1.classList.add('hidden');
+      }
+      wrapper.appendChild(clone1);
+
+      // 2do Recibo (Copia) si está activo
+      if (isOriginalYCopia) {
+        const cutDiv = document.createElement('div');
+        cutDiv.style.borderTop = '2px dashed #64748b';
+        cutDiv.style.margin = '20px 0';
+        cutDiv.style.textAlign = 'center';
+        cutDiv.style.fontSize = '12px';
+        cutDiv.style.color = '#64748b';
+        cutDiv.style.fontWeight = 'bold';
+        cutDiv.style.letterSpacing = '1px';
+        cutDiv.innerText = '✂ - - - - - - - - CORTAR AQUÍ - - - - - - - - ✂';
+        wrapper.appendChild(cutDiv);
+
+        const clone2 = source.cloneNode(true);
+        clone2.style.boxShadow = 'none';
+        clone2.style.margin = '0 auto';
+        clone2.style.width = '100%';
+        clone2.querySelectorAll('.no-print').forEach(el => el.remove());
+
+        const wrapTag2 = clone2.querySelector('#wrapperTagRecibo1');
+        const tag2 = clone2.querySelector('#tagTipoRecibo1');
+        if (wrapTag2) wrapTag2.classList.remove('hidden');
+        if (tag2) tag2.textContent = 'COPIA';
+
+        wrapper.appendChild(clone2);
+      }
+
+      document.body.appendChild(wrapper);
+
+      // Breve pausa para asegurar cálculo completo de estilos y fuentes
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const opt = {
+        margin:       isOriginalYCopia ? [8, 8, 8, 8] : [15, 10, 15, 10],
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true,
+          scrollY: 0,
+          scrollX: 0,
+          windowWidth: 800
+        },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all'] }
+      };
+
+      try {
+        await html2pdf().set(opt).from(wrapper).save();
+      } catch (err) {
+        console.error('Error al generar PDF con html2pdf:', err);
+        alert('Se abrirá la ventana de impresión para guardar en PDF.');
         window.print();
-      });
+      } finally {
+        if (document.body.contains(wrapper)) {
+          document.body.removeChild(wrapper);
+        }
+        if (btn) btn.innerHTML = originalText;
+      }
     }
 
-    function descargarPDFDirecto(id) {
+    async function descargarPDFDirecto(id) {
       cargarRecibo(id);
-      setTimeout(() => {
-        descargarPDF();
-      }, 300);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      descargarPDF();
     }
 
     // IMPRESIÓN DIRECTA DEL NAVEGADOR (Ctrl+P)
