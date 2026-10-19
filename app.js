@@ -334,16 +334,17 @@ function sincronizarVistaPrevia() {
     const pBanco = document.getElementById('previewBancoVal');
 
     const symbol = monedaActual === 'USD' ? 'USD$' : 'RD$';
+    const SVG_CHECK = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="#142852" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:auto;"><polyline points="3 8 6.5 12 13 4"></polyline></svg>`;
 
     if (tipo === 'efectivo') {
-      if (chkEfectivo) chkEfectivo.innerHTML = '✔';
+      if (chkEfectivo) chkEfectivo.innerHTML = SVG_CHECK;
       if (chkCheque) chkCheque.innerHTML = '';
       if (pEfectivo) pEfectivo.textContent = `${symbol} ` + (isNaN(montoVal) ? '0.00' : montoVal.toLocaleString('es-DO', { minimumFractionDigits: 2 }));
       if (pCheque) pCheque.textContent = '';
       if (pBanco) pBanco.textContent = '';
     } else if (tipo === 'cheque') {
       if (chkEfectivo) chkEfectivo.innerHTML = '';
-      if (chkCheque) chkCheque.innerHTML = '✔';
+      if (chkCheque) chkCheque.innerHTML = SVG_CHECK;
       if (pEfectivo) pEfectivo.textContent = '';
       if (pCheque) pCheque.textContent = document.getElementById('inputChequeNo').value || 'S/N';
       if (pBanco) pBanco.textContent = document.getElementById('inputChequeBanco').value || '';
@@ -414,7 +415,8 @@ function limpiarFormulario() {
   document.getElementById('previewBancoVal').textContent = '';
   document.getElementById('previewEntregadoNombre').textContent = '';
   document.getElementById('previewRecibidoNombre').textContent = '';
-  document.getElementById('checkEfectivoIcon').innerHTML = '✔';
+  const SVG_CHECK = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="#142852" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:auto;"><polyline points="3 8 6.5 12 13 4"></polyline></svg>`;
+  document.getElementById('checkEfectivoIcon').innerHTML = SVG_CHECK;
   document.getElementById('checkChequeIcon').innerHTML = '';
 
   actualizarCopiaPreview();

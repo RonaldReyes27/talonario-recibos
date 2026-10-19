@@ -126,10 +126,19 @@
 .date-values {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  height: 28px;
+  height: 26px;
   font-size: 14px;
   font-weight: 700;
+  line-height: 1;
+}
+
+.date-values > div {
+  display: flex;
   align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding-bottom: 4px; /* Eleva la fecha hacia arriba para centrarla dentro del recuadro */
+  box-sizing: border-box;
 }
 
 .date-values > div:not(:last-child) {
@@ -168,7 +177,7 @@
   border-bottom: 1.2px solid var(--receipt-blue);
   min-height: 18px;
   padding-left: 6px;
-  padding-bottom: 2px;
+  padding-bottom: 3px;
   font-size: 11px;
   line-height: 1.2;
   color: #0b1938;
@@ -186,9 +195,10 @@
   margin-right: 6px;
   margin-bottom: 2px;
   border-radius: 2px;
-  font-size: 11px;
-  font-weight: 800;
   flex-shrink: 0;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* Líneas de Firma */
