@@ -1,0 +1,228 @@
+/* ========================================================
+   TALONARIO DE RECIBOS DIGITAL - ESTILOS PRINCIPALES
+   ======================================================== */
+
+:root {
+  --receipt-blue: #142852;
+  --receipt-box-bg: #c8d7e8;
+  --paper-cream: #faf9f5;
+  --paper-white: #ffffff;
+}
+
+/* Tipografías */
+.font-serif-recibo {
+  font-family: 'Cinzel', 'Times New Roman', Georgia, serif;
+}
+
+.font-digital {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Contenedor del Recibo Físico */
+.receipt-container {
+  width: 100%;
+  max-width: 820px;
+  background-color: var(--paper-cream);
+  border: 3px solid var(--receipt-blue);
+  border-radius: 20px;
+  padding: 22px 28px 18px 28px;
+  color: var(--receipt-blue);
+  box-shadow: 0 4px 15px rgba(20, 40, 82, 0.08);
+  position: relative;
+  box-sizing: border-box;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Líneas continuas de escritura */
+.receipt-line {
+  border-bottom: 1.5px solid var(--receipt-blue);
+  flex-grow: 1;
+  min-height: 26px;
+  display: flex;
+  align-items: flex-end;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #0b1938;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.payment-line {
+  border-bottom: 1.2px solid var(--receipt-blue);
+  flex-grow: 1;
+  min-height: 16px;
+  display: inline-block;
+  padding-left: 4px;
+  color: #0b1938;
+  font-weight: 600;
+}
+
+/* Caja de Monto Numérico Sombreado */
+.amount-box {
+  background-color: var(--receipt-box-bg);
+  border: 1.5px solid var(--receipt-blue);
+  border-radius: 8px;
+  padding: 4px 14px;
+  min-width: 190px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--receipt-blue);
+}
+
+/* Cuadro Superior de Fecha (DIA | MES | AÑO) */
+.date-table {
+  border: 1.5px solid var(--receipt-blue);
+  border-radius: 10px;
+  overflow: hidden;
+  width: 180px;
+  text-align: center;
+}
+
+.date-header {
+  border-bottom: 1.5px solid var(--receipt-blue);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 0;
+  background-color: rgba(20, 40, 82, 0.04);
+}
+
+.date-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-size: 10px;
+  font-weight: 700;
+  border-bottom: 1.5px solid var(--receipt-blue);
+}
+
+.date-cols > div:not(:last-child) {
+  border-right: 1.5px solid var(--receipt-blue);
+}
+
+.date-values {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  height: 28px;
+  font-size: 14px;
+  font-weight: 700;
+  align-items: center;
+}
+
+.date-values > div:not(:last-child) {
+  border-right: 1.5px solid var(--receipt-blue);
+}
+
+/* Cuadro Inferior de Forma de Pago */
+.payment-box {
+  border: 1.5px solid var(--receipt-blue);
+  border-radius: 4px;
+  padding: 6px 10px;
+  width: 250px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.custom-checkbox {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--receipt-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Líneas de Firma */
+.signature-line {
+  border-top: 1.5px solid var(--receipt-blue);
+  width: 165px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding-top: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* Línea de corte entre Original y Copia */
+.cut-line {
+  display: none;
+  border-top: 2px dashed #94a3b8;
+  margin: 20px 0;
+  text-align: center;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+/* Modal y Toast de Notificación */
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-notification.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ========================================================
+   REGLAS PARA IMPRESIÓN DIRECTA NATIVA (Ctrl + P)
+   ======================================================== */
+@media print {
+  header, footer, nav, aside, .no-print {
+    display: none !important;
+  }
+  
+  body, main {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    max-width: 100% !important;
+  }
+  
+  .grid {
+    display: block !important;
+  }
+  
+  .lg\:col-span-7 {
+    width: 100% !important;
+    display: block !important;
+  }
+  
+  .print-area {
+    display: block !important;
+    width: 100% !important;
+    padding: 8mm !important;
+    margin: 0 auto !important;
+  }
+  
+  .receipt-container {
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    margin: 0 auto 20px auto !important;
+    border: 3px solid #142852 !important;
+  }
+  
+  .cut-line {
+    display: block !important;
+  }
+}
