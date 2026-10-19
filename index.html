@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Talonario de Recibos Digital - Sistema Web</title>
+  
+  <!-- Tailwind CSS para el panel de control -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- html2pdf.js para exportación directa a PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Google Fonts para tipografías idénticas al talonario tradicional -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Estilos específicos para el Recibo Físico / Impreso */
+    :root {
+      --receipt-blue: #142852;
+      --receipt-box-bg: #c8d7e8;
+      --paper-cream: #faf9f5;
+    }
+
+    .font-serif-recibo {
+      font-family: 'Cinzel', 'Times New Roman', serif;
+    }
+
+    .font-digital {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .receipt-container {
+      width: 100%;
+      max-width: 820px;
+      background-color: var(--paper-cream);
+      border: 3px solid var(--receipt-blue);
+      border-radius: 20px;
+      padding: 22px 28px 18px 28px;
+      color: var(--receipt-blue);
+      box-shadow: 0 4px 15px rgba(20, 40, 82, 0.08);
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    .receipt-line {
+      border-bottom: 1.5px solid var(--receipt-blue);
+      flex-grow: 1;
+      min-height: 26px;
+      display: flex;
+      align-items: flex-end;
+      padding-left: 8px;
+      padding-right: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #0b1938;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      overflow: hidden;
+    }
+
+    .payment-line {
+      border-bottom: 1.2px solid var(--receipt-blue);
+      flex-grow: 1;
+      min-height: 16px;
+      display: inline-block;
+      padding-left: 4px;
+    }
+
+    .amount-box {
+      background-color: var(--receipt-box-bg);
+      border: 1.5px solid var(--receipt-blue);
+      border-radius: 8px;
+      padding: 4px 16px;
+      min-width: 190px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--receipt-blue);
+    }
+
+    .date-table {
+      border: 1.5px solid var(--receipt-blue);
+      border-radius: 10px;
+      overflow: hidden;
+      width: 180px;
+      text-align: center;
+    }
+
+    .date-header {
+      border-bottom: 1.5px solid var(--receipt-blue);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 0;
+      background-color: rgba(20, 40, 82, 0.04);
+    }
+
+    .date-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      font-size: 10px;
+      font-weight: 700;
+      border-bottom: 1.5px solid var(--receipt-blue);
+    }
+
+    .date-cols > div:not(:last-child) {
+      border-right: 1.5px solid var(--receipt-blue);
+    }
+
+    .date-values {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      height: 28px;
+      font-size: 14px;
+      font-weight: 700;
+      align-items: center;
+    }
+
+    .date-values > div:not(:last-child) {
+      border-right: 1.5px solid var(--receipt-blue);
+    }
+
+    .payment-box {
+      border: 1.5px solid var(--receipt-blue);
+      border-radius: 3px;
+      padding: 6px 10px;
+      width: 250px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .custom-checkbox {
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--receipt-blue);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 6px;
+      border-radius: 2px;
+      font-size: 11px;
+    }
+
+    .signature-line {
+      border-top: 1.5px solid var(--receipt-blue);
+      width: 160px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      padding-top: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Reglas de Impresión Nativa (Ctrl + P) */
+    @media print {
+      body {
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-area {
+        display: block !important;
+        width: 100% !important;
+        padding: 10mm !important;
+      }
+      .receipt-container {
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 25px;
+      }
+      .cut-line {
+        display: block !important;
+        border-top: 2px dashed #999;
+        margin: 20px 0;
+        text-align: center;
+        color: #666;
+        font-size: 12px;
+      }
+    }
+
+    .cut-line {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-digital min-h-screen">
+
+  <!-- Header Superior -->
+  <header class="bg-indigo-950 text-white shadow-md border-b border-indigo-900 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="bg-amber-400 text-indigo-950 p-2 rounded-lg font-bold text-xl shadow">
+          🧾
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">Talonario de Recibos Digital</h1>
+          <p class="text-xs text-indigo-200">Emisión de recibos, generación de PDF e historial guardado</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <button onclick="scrollToHistory()" class="px-3 py-1.5 bg-indigo-800 hover:bg-indigo-700 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 text-indigo-100">
+          <span>📁 Historial de Recibos</span>
+          <span id="badgeCount" class="bg-amber-400 text-indigo-950 px-1.5 py-0.5 rounded-full font-bold text-[10px]">0</span>
+        </button>
+        <button onclick="nuevoRecibo()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-1.5">
+          <span>➕ Nuevo Recibo</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- COLUMNA IZQUIERDA: FORMULARIO AMIGABLE (Lg: 5 cols) -->
+      <section class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 no-print">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            <span class="text-indigo-600">✍️</span> Datos del Recibo
+          </h2>
+          <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-semibold" id="formReceiptTag">
+            Recibo #<span id="receiptNumberDisplay">0001</span>
+          </span>
+        </div>
+
+        <form id="receiptForm" onsubmit="event.preventDefault();" class="space-y-4">
+          
+          <!-- Fila: Número y Fecha -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">No. de Recibo</label>
+              <input type="text" id="inputNumero" class="w-full text-sm font-bold bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-indigo-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="0001">
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-semibold text-slate-600">Fecha</label>
+                <button type="button" onclick="setFechaHoy()" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline">
+                  Poner Hoy
+                </button>
+              </div>
+              <input type="date" id="inputFecha" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Hemos recibido de -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Hemos recibido de (Nombre o Empresa)</label>
+            <input type="text" id="inputRecibidoDe" placeholder="Ej: Juan Pérez / Constructora ABC" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+
+          <!-- Monto numérico RD$ -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Monto en Números (RD$)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2 text-sm font-bold text-slate-400">RD$</span>
+              <input type="number" step="0.01" id="inputMonto" placeholder="0.00" class="w-full text-base font-bold bg-slate-50 border border-slate-300 rounded-lg pl-12 pr-3 py-2 text-indigo-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+              <span>💡</span> Se convierte automáticamente a letras en español
+            </p>
+          </div>
+
+          <!-- La suma de (En letras) -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-slate-600">La suma de (en letras)</label>
+              <button type="button" onclick="regenerarMontoLetras()" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline">
+                Regenerar letras
+              </button>
+            </div>
+            <textarea id="inputMontoLetras" rows="2" placeholder="Ej: Diez mil quinientos pesos con 00/100" class="w-full text-xs uppercase bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+          </div>
+
+          <!-- Por concepto de -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Por concepto de</label>
+            <textarea id="inputConcepto" rows="2" placeholder="Ej: Pago de alquiler del mes de octubre, mantenimiento y servicios..." class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+          </div>
+
+          <!-- Forma de Pago -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <label class="block text-xs font-bold text-slate-700 mb-2">Forma de Pago</label>
+            
+            <div class="space-y-2">
+              <!-- Efectivo -->
+              <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
+                <input type="radio" name="tipoPago" value="efectivo" checked class="text-indigo-600 focus:ring-indigo-500 mr-2" onchange="togglePagoCampos()">
+                <span>Efectivo</span>
+              </label>
+
+              <!-- Cheque -->
+              <div>
+                <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
+                  <input type="radio" name="tipoPago" value="cheque" class="text-indigo-600 focus:ring-indigo-500 mr-2" onchange="togglePagoCampos()">
+                  <span>Cheque</span>
+                </label>
+                <div id="chequeCampos" class="mt-2 ml-5 grid grid-cols-2 gap-2 hidden">
+                  <input type="text" id="inputChequeNo" placeholder="No. de Cheque" class="text-xs bg-white border border-slate-300 rounded px-2 py-1">
+                  <input type="text" id="inputChequeBanco" placeholder="Banco" class="text-xs bg-white border border-slate-300 rounded px-2 py-1">
+                </div>
+              </div>
+
+              <!-- Transferencia / Banco directo -->
+              <div>
+                <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
+                  <input type="radio" name="tipoPago" value="banco" class="text-indigo-600 focus:ring-indigo-500 mr-2" onchange="togglePagoCampos()">
+                  <span>Transferencia / Depósito Bancario</span>
+                </label>
+                <div id="bancoCampos" class="mt-2 ml-5 hidden">
+                  <input type="text" id="inputBancoDirecto" placeholder="Nombre del Banco y/o Ref" class="w-full text-xs bg-white border border-slate-300 rounded px-2 py-1">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Firmas -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Entregado por (Opcional)</label>
+              <input type="text" id="inputEntregadoPor" placeholder="Nombre de quien entrega" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Recibido por (Opcional)</label>
+              <input type="text" id="inputRecibidoPor" placeholder="Nombre de quien recibe" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="pt-3 border-t border-slate-200 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" onclick="guardarRecibo()" class="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5">
+                <span>💾 Guardar Recibo</span>
+              </button>
+              <button type="button" onclick="descargarPDF()" class="w-full py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5">
+                <span>📄 Descargar PDF</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" onclick="imprimirRecibo()" class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                <span>🖨️ Imprimir Directo</span>
+              </button>
+              <button type="button" onclick="nuevoRecibo()" class="w-full py-2 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                <span>🧹 Limpiar Formulario</span>
+              </button>
+            </div>
+          </div>
+
+        </form>
+      </section>
+
+      <!-- COLUMNA DERECHA: VISTA PREVIA DEL TALONARIO IDÉNTICA AL FÍSICO (Lg: 7 cols) -->
+      <section class="lg:col-span-7 space-y-4">
+        
+        <!-- Barra de Controles de la Vista Previa -->
+        <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3 no-print">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-700">👀 Vista Previa en Tiempo Real</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="text-xs font-medium text-slate-600 flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" id="checkOriginalYCopia" onchange="toggleOriginalYCopia()" class="rounded text-indigo-600 focus:ring-indigo-500">
+              <span class="font-bold text-indigo-950">Imprimir Original y Copia (2 en 1 hoja)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ÁREA IMPRIMIBLE / VISTA PREVIA -->
+        <div id="printArea" class="print-area space-y-6">
+          
+          <!-- RECIBO ORIGINAL -->
+          <div class="receipt-container mx-auto" id="reciboPreview">
+            
+            <!-- Indicador sutil de Original/Copia (visible solo si está activo el modo 2 en 1) -->
+            <div id="wrapperTagRecibo1" class="flex justify-end mb-1 hidden">
+              <span id="tagTipoRecibo1" class="text-[10px] font-bold tracking-widest text-[#142852] border border-[#142852] px-2 py-0.5 rounded">ORIGINAL</span>
+            </div>
+
+            <!-- Fila Superior: Título RECIBO + Tabla de FECHA -->
+            <div class="flex justify-between items-start pt-1 pb-3">
+              
+              <!-- TÍTULO RECIBO + NÚMERO -->
+              <div class="flex items-baseline gap-4">
+                <h1 class="text-4xl font-extrabold font-serif-recibo tracking-widest text-[#142852]">
+                  RECIBO
+                </h1>
+                <span class="text-sm font-bold tracking-wider text-[#142852] opacity-80" id="previewNumero">
+                  No. 0001
+                </span>
+              </div>
+
+              <!-- CUADRO FECHA (DIA | MES | AÑO) -->
+              <div class="date-table">
+                <div class="date-header">FECHA</div>
+                <div class="date-cols">
+                  <div>DIA</div>
+                  <div>MES</div>
+                  <div>AÑO</div>
+                </div>
+                <div class="date-values">
+                  <div id="previewDia">--</div>
+                  <div id="previewMes">--</div>
+                  <div id="previewAno">----</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- CUERPO PRINCIPAL: LÍNEAS DEL RECIBO -->
+            <div class="space-y-4 my-2">
+              
+              <!-- Línea: HEMOS RECIBIDO DE -->
+              <div class="flex items-baseline w-full">
+                <span class="text-[12px] font-bold tracking-wide text-[#142852] whitespace-nowrap mr-2">
+                  HEMOS RECIBIDO DE:
+                </span>
+                <div class="receipt-line" id="previewRecibidoDe">
+                  <!-- Texto dinámico -->
+                </div>
+              </div>
+
+              <!-- Línea: LA SUMA DE + RD$ [ MONTO ] -->
+              <div class="flex items-center w-full gap-2">
+                <div class="flex items-baseline flex-grow">
+                  <span class="text-[12px] font-bold tracking-wide text-[#142852] whitespace-nowrap mr-2">
+                    LA SUMA DE:
+                  </span>
+                  <div class="receipt-line text-[12px]" id="previewMontoLetras">
+                    <!-- Texto dinámico en letras -->
+                  </div>
+                </div>
+
+                <div class="flex items-center ml-2">
+                  <span class="text-[13px] font-extrabold text-[#142852] mr-1.5 tracking-wider">RD$</span>
+                  <div class="amount-box" id="previewMontoNum">
+                    0.00
+                  </div>
+                </div>
+              </div>
+
+              <!-- Línea: POR CONCEPTO DE -->
+              <div class="flex items-baseline w-full">
+                <span class="text-[12px] font-bold tracking-wide text-[#142852] whitespace-nowrap mr-2">
+                  POR CONCEPTO DE:
+                </span>
+                <div class="receipt-line" id="previewConcepto1">
+                  <!-- Texto dinámico -->
+                </div>
+              </div>
+
+              <!-- Línea adicional para concepto largo -->
+              <div class="w-full">
+                <div class="receipt-line w-full" id="previewConcepto2">
+                  <!-- Continuación de texto si es largo -->
+                </div>
+              </div>
+
+            </div>
+
+            <!-- SECCIÓN INFERIOR: FORMA DE PAGO + FIRMAS -->
+            <div class="flex justify-between items-end mt-4 pt-2">
+              
+              <!-- Cuadro de Pago (Efectivo / Cheque / Banco) -->
+              <div class="payment-box">
+                <!-- Efectivo -->
+                <div class="flex items-center mb-1.5">
+                  <span class="custom-checkbox" id="checkEfectivoIcon"></span>
+                  <span class="mr-1 whitespace-nowrap">EFECTIVO:</span>
+                  <span class="payment-line text-[11px]" id="previewEfectivoVal"></span>
+                </div>
+
+                <!-- Cheque No. -->
+                <div class="flex items-center mb-1.5">
+                  <span class="custom-checkbox" id="checkChequeIcon"></span>
+                  <span class="mr-1 whitespace-nowrap">CHEQUE No.</span>
+                  <span class="payment-line text-[11px]" id="previewChequeNoVal"></span>
+                </div>
+
+                <!-- Banco -->
+                <div class="flex items-center">
+                  <span class="mr-1 whitespace-nowrap">BANCO</span>
+                  <span class="payment-line text-[11px]" id="previewBancoVal"></span>
+                </div>
+              </div>
+
+              <!-- Firmas: Entregado por / Recibido por -->
+              <div class="flex gap-8 mb-1">
+                <div>
+                  <div class="h-6 text-center text-xs font-semibold text-slate-700 italic" id="previewEntregadoNombre"></div>
+                  <div class="signature-line">ENTREGADO POR</div>
+                </div>
+                <div>
+                  <div class="h-6 text-center text-xs font-semibold text-slate-700 italic" id="previewRecibidoNombre"></div>
+                  <div class="signature-line">RECIBIDO POR</div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- LÍNEA DE CORTE (Solo visible si se activa Original y Copia) -->
+          <div id="cutLine" class="cut-line no-print">
+            ✂ - - - - - - - - - - - - - - CORTAR AQUÍ - - - - - - - - - - - - - - ✂
+          </div>
+
+          <!-- RECIBO COPIA (Opcional: 2 en una hoja) -->
+          <div class="receipt-container mx-auto hidden" id="reciboCopiaPreview">
+            <!-- Este contenedor se clona o se actualiza idéntico al original -->
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- SECCIÓN INFERIOR: HISTORIAL DE RECIBOS GUARDADOS -->
+    <section id="historialSection" class="mt-10 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <span>📚</span> Historial de Recibos Guardados
+          </h2>
+          <p class="text-xs text-slate-500">Los recibos se guardan automáticamente en tu computadora para que nunca se pierdan</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Buscador -->
+          <div class="relative">
+            <input type="text" id="inputBuscar" oninput="filtrarHistorial()" placeholder="Buscar por cliente, No., concepto..." class="text-xs bg-slate-50 border border-slate-300 rounded-lg pl-8 pr-3 py-2 w-64 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+          </div>
+
+          <!-- Botón Exportar CSV -->
+          <button onclick="exportarExcelCSV()" class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+            <span>📊 Exportar a Excel</span>
+          </button>
+
+          <!-- Botón Backup / Restaurar -->
+          <button onclick="exportarCopiaSeguridad()" class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5" title="Descargar archivo con todos tus recibos guardados">
+            <span>💾 Respaldar Datos</span>
+          </button>
+
+          <label class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="Cargar archivo de respaldo previo">
+            <span>📂 Restaurar</span>
+            <input type="file" id="fileRestore" accept=".json" onchange="importarCopiaSeguridad(event)" class="hidden">
+          </label>
+        </div>
+      </div>
+
+      <!-- Resumen Estadístico Rápido -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 my-4">
+        <div class="bg-indigo-50/60 p-3.5 rounded-xl border border-indigo-100">
+          <p class="text-xs font-medium text-indigo-600">Total de Recibos Emitidos</p>
+          <p class="text-xl font-extrabold text-indigo-950 mt-0.5" id="statTotalRecibos">0</p>
+        </div>
+        <div class="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-100">
+          <p class="text-xs font-medium text-emerald-600">Monto Total Recaudado (RD$)</p>
+          <p class="text-xl font-extrabold text-emerald-950 mt-0.5" id="statMontoTotal">RD$ 0.00</p>
+        </div>
+        <div class="bg-amber-50/60 p-3.5 rounded-xl border border-amber-100">
+          <p class="text-xs font-medium text-amber-600">Último Recibo Registrado</p>
+          <p class="text-sm font-bold text-amber-950 mt-1 truncate" id="statUltimoRecibo">Ninguno aún</p>
+        </div>
+      </div>
+
+      <!-- Tabla de Recibos -->
+      <div class="overflow-x-auto mt-4">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-600 uppercase font-bold border-y border-slate-200">
+            <tr>
+              <th class="py-3 px-3">No.</th>
+              <th class="py-3 px-3">Fecha</th>
+              <th class="py-3 px-3">Recibido De</th>
+              <th class="py-3 px-3">Monto</th>
+              <th class="py-3 px-3">Forma de Pago</th>
+              <th class="py-3 px-3">Concepto</th>
+              <th class="py-3 px-3 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaHistorialBody" class="divide-y divide-slate-100 font-medium">
+            <!-- Filas dinámicas -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Estado vacío -->
+      <div id="emptyState" class="text-center py-10 hidden">
+        <div class="text-3xl mb-2">📋</div>
+        <p class="text-sm font-semibold text-slate-700">No hay recibos guardados todavía</p>
+        <p class="text-xs text-slate-400 mt-1">Llena el formulario arriba y haz clic en "Guardar Recibo" para comenzar.</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- LÓGICA JAVASCRIPT COMPLETA -->
+  <script>
+    // ESTADO DE LA APLICACIÓN
+    const STORAGE_KEY = 'talonario_recibos_guardados_v1';
+    let recibos = [];
+    let reciboActualId = null;
+
+    // INICIALIZACIÓN
+    window.addEventListener('DOMContentLoaded', () => {
+      cargarRecibosDesdeStorage();
+      setFechaHoy();
+      sincronizarVistaPrevia();
+      configurarListeners();
+    });
+
+    // LISTENERS PARA VISTA PREVIA EN VIVO
+    function configurarListeners() {
+      const inputs = [
+        'inputNumero', 'inputFecha', 'inputRecibidoDe', 
+        'inputMonto', 'inputMontoLetras', 'inputConcepto',
+        'inputChequeNo', 'inputChequeBanco', 'inputBancoDirecto',
+        'inputEntregadoPor', 'inputRecibidoPor'
+      ];
+
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', () => {
+            if (id === 'inputMonto') {
+              autoGenerarLetras();
+            }
+            sincronizarVistaPrevia();
+          });
+        }
+      });
+    }
+
+    // FECHA DE HOY
+    function setFechaHoy() {
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      document.getElementById('inputFecha').value = `${yyyy}-${mm}-${dd}`;
+      sincronizarVistaPrevia();
+    }
+
+    // CONVERTIDOR DE NÚMEROS A LETRAS EN ESPAÑOL (RD$)
+    function numeroALetras(num) {
+      num = parseFloat(num);
+      if (isNaN(num) || num <= 0) return '';
+      
+      const partes = num.toFixed(2).split('.');
+      const entero = parseInt(partes[0], 10);
+      const centavos = partes[1];
+
+      function unidades(n) {
+        switch(n) {
+          case 1: return 'UN';
+          case 2: return 'DOS';
+          case 3: return 'TRES';
+          case 4: return 'CUATRO';
+          case 5: return 'CINCO';
+          case 6: return 'SEIS';
+          case 7: return 'SIETE';
+          case 8: return 'OCHO';
+          case 9: return 'NUEVE';
+          default: return '';
+        }
+      }
+
+      function decenasYUnidades(n) {
+        if (n === 0) return '';
+        if (n < 10) return unidades(n);
+        if (n === 10) return 'DIEZ';
+        if (n === 11) return 'ONCE';
+        if (n === 12) return 'DOCE';
+        if (n === 13) return 'TRECE';
+        if (n === 14) return 'CATORCE';
+        if (n === 15) return 'QUINCE';
+        if (n < 20) return 'DIECI' + unidades(n - 10);
+        if (n === 20) return 'VEINTE';
+        if (n < 30) return 'VEINTI' + unidades(n - 20);
+        
+        const dec = Math.floor(n / 10);
+        const uni = n % 10;
+        let decStr = '';
+        switch(dec) {
+          case 3: decStr = 'TREINTA'; break;
+          case 4: decStr = 'CUARENTA'; break;
+          case 5: decStr = 'CINCUENTA'; break;
+          case 6: decStr = 'SESENTA'; break;
+          case 7: decStr = 'SETENTA'; break;
+          case 8: decStr = 'OCHENTA'; break;
+          case 9: decStr = 'NOVENTA'; break;
+        }
+        return uni === 0 ? decStr : `${decStr} Y ${unidades(uni)}`;
+      }
+
+      function centenas(n) {
+        if (n === 100) return 'CIEN';
+        if (n < 100) return decenasYUnidades(n);
+        const cen = Math.floor(n / 100);
+        const resto = n % 100;
+        let cenStr = '';
+        switch(cen) {
+          case 1: cenStr = 'CIENTO'; break;
+          case 2: cenStr = 'DOSCIENTOS'; break;
+          case 3: cenStr = 'TRESCIENTOS'; break;
+          case 4: cenStr = 'CUATROCIENTOS'; break;
+          case 5: cenStr = 'QUINIENTOS'; break;
+          case 6: cenStr = 'SEISCIENTOS'; break;
+          case 7: cenStr = 'SETECIENTOS'; break;
+          case 8: cenStr = 'OCHOCIENTOS'; break;
+          case 9: cenStr = 'NOVECIENTOS'; break;
+        }
+        const restoStr = decenasYUnidades(resto);
+        return restoStr ? `${cenStr} ${restoStr}` : cenStr;
+      }
+
+      function miles(n) {
+        if (n < 1000) return centenas(n);
+        const mil = Math.floor(n / 1000);
+        const resto = n % 1000;
+        let milStr = mil === 1 ? 'MIL' : `${centenas(mil)} MIL`;
+        const restoStr = centenas(resto);
+        return restoStr ? `${milStr} ${restoStr}` : milStr;
+      }
+
+      function millones(n) {
+        if (n < 1000000) return miles(n);
+        const millon = Math.floor(n / 1000000);
+        const resto = n % 1000000;
+        let millonStr = millon === 1 ? 'UN MILLÓN' : `${miles(millon)} MILLONES`;
+        const restoStr = miles(resto);
+        return restoStr ? `${millonStr} ${restoStr}` : millonStr;
+      }
+
+      const texto = millones(entero);
+      const moneda = (texto.endsWith('MILLÓN') || texto.endsWith('MILLONES')) ? 'DE PESOS' : 'PESOS';
+      return `${texto} ${moneda} CON ${centavos}/100`;
+    }
+
+    function autoGenerarLetras() {
+      const val = parseFloat(document.getElementById('inputMonto').value);
+      if (!isNaN(val) && val > 0) {
+        document.getElementById('inputMontoLetras').value = numeroALetras(val);
+      }
+    }
+
+    function regenerarMontoLetras() {
+      autoGenerarLetras();
+      sincronizarVistaPrevia();
+    }
+
+    // CONTROL DE FORMA DE PAGO
+    function togglePagoCampos() {
+      const tipo = document.querySelector('input[name="tipoPago"]:checked').value;
+      const chequeDiv = document.getElementById('chequeCampos');
+      const bancoDiv = document.getElementById('bancoCampos');
+
+      if (tipo === 'cheque') {
+        chequeDiv.classList.remove('hidden');
+        bancoDiv.classList.add('hidden');
+      } else if (tipo === 'banco') {
+        chequeDiv.classList.add('hidden');
+        bancoDiv.classList.remove('hidden');
+      } else {
+        chequeDiv.classList.add('hidden');
+        bancoDiv.classList.add('hidden');
+      }
+      sincronizarVistaPrevia();
+    }
+
+    // SINCRONIZAR VISTA PREVIA IDÉNTICA AL RECIBO
+    function sincronizarVistaPrevia() {
+      const num = document.getElementById('inputNumero').value || '0001';
+      document.getElementById('previewNumero').textContent = `No. ${num}`;
+      document.getElementById('receiptNumberDisplay').textContent = num;
+
+      // Fecha
+      const fechaVal = document.getElementById('inputFecha').value;
+      if (fechaVal) {
+        const parts = fechaVal.split('-');
+        document.getElementById('previewDia').textContent = parts[2];
+        document.getElementById('previewMes').textContent = parts[1];
+        document.getElementById('previewAno').textContent = parts[0];
+      } else {
+        document.getElementById('previewDia').textContent = '--';
+        document.getElementById('previewMes').textContent = '--';
+        document.getElementById('previewAno').textContent = '----';
+      }
+
+      // Hemos recibido de
+      const recibidoDe = document.getElementById('inputRecibidoDe').value || '';
+      document.getElementById('previewRecibidoDe').textContent = recibidoDe;
+
+      // Monto
+      const montoVal = parseFloat(document.getElementById('inputMonto').value);
+      if (!isNaN(montoVal) && montoVal > 0) {
+        document.getElementById('previewMontoNum').textContent = montoVal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } else {
+        document.getElementById('previewMontoNum').textContent = '0.00';
+      }
+
+      // La suma de
+      const montoLetras = document.getElementById('inputMontoLetras').value || '';
+      document.getElementById('previewMontoLetras').textContent = montoLetras;
+
+      // Concepto (distribuir en dos líneas si es largo)
+      const concepto = document.getElementById('inputConcepto').value || '';
+      const c1 = document.getElementById('previewConcepto1');
+      const c2 = document.getElementById('previewConcepto2');
+
+      if (concepto.length > 55) {
+        const corte = concepto.lastIndexOf(' ', 55);
+        const pos = corte > 20 ? corte : 55;
+        c1.textContent = concepto.substring(0, pos);
+        c2.textContent = concepto.substring(pos).trim();
+      } else {
+        c1.textContent = concepto;
+        c2.textContent = '';
+      }
+
+      // Forma de Pago
+      const tipo = document.querySelector('input[name="tipoPago"]:checked').value;
+      const chkEfectivo = document.getElementById('checkEfectivoIcon');
+      const chkCheque = document.getElementById('checkChequeIcon');
+      const pEfectivo = document.getElementById('previewEfectivoVal');
+      const pCheque = document.getElementById('previewChequeNoVal');
+      const pBanco = document.getElementById('previewBancoVal');
+
+      if (tipo === 'efectivo') {
+        chkEfectivo.innerHTML = '✔';
+        chkCheque.innerHTML = '';
+        pEfectivo.textContent = 'RD$ ' + (isNaN(montoVal) ? '0.00' : montoVal.toLocaleString('es-DO', { minimumFractionDigits: 2 }));
+        pCheque.textContent = '';
+        pBanco.textContent = '';
+      } else if (tipo === 'cheque') {
+        chkEfectivo.innerHTML = '';
+        chkCheque.innerHTML = '✔';
+        pEfectivo.textContent = '';
+        pCheque.textContent = document.getElementById('inputChequeNo').value || 'S/N';
+        pBanco.textContent = document.getElementById('inputChequeBanco').value || '';
+      } else if (tipo === 'banco') {
+        chkEfectivo.innerHTML = '';
+        chkCheque.innerHTML = '';
+        pEfectivo.textContent = '';
+        pCheque.textContent = 'TRANSF.';
+        pBanco.textContent = document.getElementById('inputBancoDirecto').value || 'TRANSFERENCIA BANCARIA';
+      }
+
+      // Firmas
+      document.getElementById('previewEntregadoNombre').textContent = document.getElementById('inputEntregadoPor').value || '';
+      document.getElementById('previewRecibidoNombre').textContent = document.getElementById('inputRecibidoPor').value || '';
+
+      // Si "Original y Copia" está activo, clonar en el segundo contenedor
+      actualizarCopiaPreview();
+    }
+
+    // ORIGINAL Y COPIA (2 EN 1 HOJA)
+    function toggleOriginalYCopia() {
+      const isChecked = document.getElementById('checkOriginalYCopia').checked;
+      const cutLine = document.getElementById('cutLine');
+      const copiaPreview = document.getElementById('reciboCopiaPreview');
+      const wrapperTag = document.getElementById('wrapperTagRecibo1');
+
+      if (isChecked) {
+        cutLine.classList.remove('hidden');
+        copiaPreview.classList.remove('hidden');
+        if (wrapperTag) wrapperTag.classList.remove('hidden');
+        actualizarCopiaPreview();
+      } else {
+        cutLine.classList.add('hidden');
+        copiaPreview.classList.add('hidden');
+        if (wrapperTag) wrapperTag.classList.add('hidden');
+      }
+    }
+
+    function actualizarCopiaPreview() {
+      const isChecked = document.getElementById('checkOriginalYCopia').checked;
+      if (!isChecked) return;
+
+      const original = document.getElementById('reciboPreview');
+      const copia = document.getElementById('reciboCopiaPreview');
+      
+      copia.innerHTML = original.innerHTML;
+      
+      // Cambiar etiqueta de ORIGINAL a COPIA en el segundo recibo
+      const tag = copia.querySelector('#tagTipoRecibo1');
+      if (tag) {
+        tag.textContent = 'COPIA';
+      }
+    }
+
+    // GUARDAR EN STORAGE / HISTORIAL
+    function guardarRecibo() {
+      const num = document.getElementById('inputNumero').value.trim() || '0001';
+      const fecha = document.getElementById('inputFecha').value || new Date().toISOString().split('T')[0];
+      const cliente = document.getElementById('inputRecibidoDe').value.trim();
+      const monto = parseFloat(document.getElementById('inputMonto').value) || 0;
+      const montoLetras = document.getElementById('inputMontoLetras').value.trim();
+      const concepto = document.getElementById('inputConcepto').value.trim();
+      const tipoPago = document.querySelector('input[name="tipoPago"]:checked').value;
+      const chequeNo = document.getElementById('inputChequeNo').value.trim();
+      const chequeBanco = document.getElementById('inputChequeBanco').value.trim();
+      const bancoDirecto = document.getElementById('inputBancoDirecto').value.trim();
+      const entregadoPor = document.getElementById('inputEntregadoPor').value.trim();
+      const recibidoPor = document.getElementById('inputRecibidoPor').value.trim();
+
+      if (!cliente) {
+        alert('Por favor escribe el nombre de quien se recibió el pago ("Hemos recibido de").');
+        document.getElementById('inputRecibidoDe').focus();
+        return;
+      }
+
+      if (monto <= 0) {
+        alert('Por favor ingresa un monto válido mayor a 0.');
+        document.getElementById('inputMonto').focus();
+        return;
+      }
+
+      const receiptData = {
+        id: reciboActualId || 'rec_' + Date.now(),
+        numero: num,
+        fecha: fecha,
+        cliente: cliente,
+        monto: monto,
+        montoLetras: montoLetras,
+        concepto: concepto,
+        tipoPago: tipoPago,
+        chequeNo: chequeNo,
+        chequeBanco: chequeBanco,
+        bancoDirecto: bancoDirecto,
+        entregadoPor: entregadoPor,
+        recibidoPor: recibidoPor,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (reciboActualId) {
+        // Actualizar existente
+        const index = recibos.findIndex(r => r.id === reciboActualId);
+        if (index !== -1) {
+          recibos[index] = receiptData;
+        }
+      } else {
+        // Insertar al inicio
+        recibos.unshift(receiptData);
+      }
+
+      guardarEnLocalStorage();
+      renderHistorial();
+      alert(`✅ Recibo No. ${num} guardado exitosamente en el sistema.`);
+    }
+
+    function nuevoRecibo() {
+      reciboActualId = null;
+      document.getElementById('receiptForm').reset();
+      
+      // Sugerir el siguiente número correlativo automáticamente
+      let siguienteNumero = '0001';
+      if (recibos.length > 0) {
+        const numerosExistentes = recibos
+          .map(r => parseInt(r.numero, 10))
+          .filter(n => !isNaN(n));
+        if (numerosExistentes.length > 0) {
+          const maxNum = Math.max(...numerosExistentes);
+          siguienteNumero = String(maxNum + 1).padStart(4, '0');
+        }
+      }
+      
+      document.getElementById('inputNumero').value = siguienteNumero;
+      document.getElementById('formReceiptTag').innerHTML = `Nuevo Recibo #<span>${siguienteNumero}</span>`;
+      document.querySelector('input[name="tipoPago"][value="efectivo"]').checked = true;
+      togglePagoCampos();
+      setFechaHoy();
+      sincronizarVistaPrevia();
+    }
+
+    // CARGAR RECIBO PARA EDITAR / VER
+    function cargarRecibo(id) {
+      const r = recibos.find(item => item.id === id);
+      if (!r) return;
+
+      reciboActualId = r.id;
+      document.getElementById('inputNumero').value = r.numero;
+      document.getElementById('inputFecha').value = r.fecha;
+      document.getElementById('inputRecibidoDe').value = r.cliente;
+      document.getElementById('inputMonto').value = r.monto;
+      document.getElementById('inputMontoLetras').value = r.montoLetras;
+      document.getElementById('inputConcepto').value = r.concepto;
+      
+      const radioPago = document.querySelector(`input[name="tipoPago"][value="${r.tipoPago}"]`);
+      if (radioPago) radioPago.checked = true;
+      
+      document.getElementById('inputChequeNo').value = r.chequeNo || '';
+      document.getElementById('inputChequeBanco').value = r.chequeBanco || '';
+      document.getElementById('inputBancoDirecto').value = r.bancoDirecto || '';
+      document.getElementById('inputEntregadoPor').value = r.entregadoPor || '';
+      document.getElementById('inputRecibidoPor').value = r.recibidoPor || '';
+
+      document.getElementById('formReceiptTag').innerHTML = `Editando #<span>${r.numero}</span>`;
+      togglePagoCampos();
+      sincronizarVistaPrevia();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // DUPLICAR RECIBO (IDEAL PARA PAGOS RECURRENTES)
+    function duplicarRecibo(id) {
+      const r = recibos.find(item => item.id === id);
+      if (!r) return;
+
+      nuevoRecibo();
+      document.getElementById('inputRecibidoDe').value = r.cliente;
+      document.getElementById('inputMonto').value = r.monto;
+      document.getElementById('inputMontoLetras').value = r.montoLetras;
+      document.getElementById('inputConcepto').value = r.concepto;
+      document.getElementById('inputEntregadoPor').value = r.entregadoPor || '';
+      document.getElementById('inputRecibidoPor').value = r.recibidoPor || '';
+      
+      const radioPago = document.querySelector(`input[name="tipoPago"][value="${r.tipoPago}"]`);
+      if (radioPago) radioPago.checked = true;
+      togglePagoCampos();
+      sincronizarVistaPrevia();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ELIMINAR RECIBO
+    function eliminarRecibo(id) {
+      const r = recibos.find(item => item.id === id);
+      if (!r) return;
+
+      if (confirm(`¿Estás seguro de que deseas eliminar el Recibo No. ${r.numero} de ${r.cliente}?`)) {
+        recibos = recibos.filter(item => item.id !== id);
+        guardarEnLocalStorage();
+        renderHistorial();
+        if (reciboActualId === id) {
+          nuevoRecibo();
+        }
+      }
+    }
+
+    // STORAGE LOCAL
+    function guardarEnLocalStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(recibos));
+      } catch (e) {
+        console.error('Error guardando en localStorage', e);
+      }
+    }
+
+    function cargarRecibosDesdeStorage() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (data) {
+          recibos = JSON.parse(data);
+        } else {
+          // Recibo de bienvenida de ejemplo
+          recibos = [{
+            id: 'rec_ejemplo_1',
+            numero: '0001',
+            fecha: new Date().toISOString().split('T')[0],
+            cliente: 'CARLOS ALBERTO DÍAZ',
+            monto: 15500.00,
+            montoLetras: 'QUINCE MIL QUINIENTOS PESOS CON 00/100',
+            concepto: 'PAGO DE ALQUILER APTO. 3B - MES CORRESPONDIENTE',
+            tipoPago: 'efectivo',
+            chequeNo: '',
+            chequeBanco: '',
+            bancoDirecto: '',
+            entregadoPor: 'Carlos Alberto Díaz',
+            recibidoPor: 'Administración',
+            updatedAt: new Date().toISOString()
+          }];
+          guardarEnLocalStorage();
+        }
+      } catch (e) {
+        recibos = [];
+      }
+      renderHistorial();
+    }
+
+    // RENDER HISTORIAL Y ESTADÍSTICAS
+    function renderHistorial(lista = recibos) {
+      const tbody = document.getElementById('tablaHistorialBody');
+      const emptyState = document.getElementById('emptyState');
+      tbody.innerHTML = '';
+
+      // Actualizar contadores
+      document.getElementById('badgeCount').textContent = recibos.length;
+      document.getElementById('statTotalRecibos').textContent = recibos.length;
+      
+      const totalDinero = recibos.reduce((acc, curr) => acc + (parseFloat(curr.monto) || 0), 0);
+      document.getElementById('statMontoTotal').textContent = 'RD$ ' + totalDinero.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
+      if (recibos.length > 0) {
+        document.getElementById('statUltimoRecibo').textContent = `#${recibos[0].numero} - ${recibos[0].cliente} (RD$ ${recibos[0].monto.toLocaleString('es-DO')})`;
+      } else {
+        document.getElementById('statUltimoRecibo').textContent = 'Ninguno aún';
+      }
+
+      if (lista.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      lista.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
+
+        const formaTexto = r.tipoPago === 'efectivo' ? '💵 Efectivo' : (r.tipoPago === 'cheque' ? `🏦 Cheque #${r.chequeNo || 'S/N'}` : '📲 Transferencia');
+
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-bold text-indigo-950">#${r.numero}</td>
+          <td class="py-3 px-3 text-slate-500">${r.fecha}</td>
+          <td class="py-3 px-3 font-semibold text-slate-800">${escapeHtml(r.cliente)}</td>
+          <td class="py-3 px-3 font-bold text-emerald-700 whitespace-nowrap">RD$ ${r.monto.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</td>
+          <td class="py-3 px-3 text-slate-600">${formaTexto}</td>
+          <td class="py-3 px-3 text-slate-500 max-w-xs truncate" title="${escapeHtml(r.concepto)}">${escapeHtml(r.concepto)}</td>
+          <td class="py-3 px-3 text-center whitespace-nowrap">
+            <button onclick="cargarRecibo('${r.id}')" title="Ver / Editar" class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded font-bold mr-1">
+              ✏️ Ver
+            </button>
+            <button onclick="descargarPDFDirecto('${r.id}')" title="Descargar PDF" class="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded font-bold mr-1">
+              📄 PDF
+            </button>
+            <button onclick="duplicarRecibo('${r.id}')" title="Duplicar como nuevo" class="p-1.5 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded font-bold mr-1">
+              📋 Duplicar
+            </button>
+            <button onclick="eliminarRecibo('${r.id}')" title="Eliminar" class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded font-bold">
+              🗑️
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filtrarHistorial() {
+      const q = document.getElementById('inputBuscar').value.toLowerCase().trim();
+      if (!q) {
+        renderHistorial(recibos);
+        return;
+      }
+      const filtrados = recibos.filter(r => 
+        (r.numero && r.numero.toLowerCase().includes(q)) ||
+        (r.cliente && r.cliente.toLowerCase().includes(q)) ||
+        (r.concepto && r.concepto.toLowerCase().includes(q)) ||
+        (r.fecha && r.fecha.toLowerCase().includes(q))
+      );
+      renderHistorial(filtrados);
+    }
+
+    // EXPORTACIÓN A EXCEL / CSV
+    function exportarExcelCSV() {
+      if (recibos.length === 0) {
+        alert('No hay recibos guardados para exportar.');
+        return;
+      }
+
+      let csv = '\uFEFF'; // BOM para que Excel reconozca acentos y ñ
+      csv += 'Numero,Fecha,Cliente,Monto_RD,Forma_Pago,Detalle_Pago,Concepto,Entregado_Por,Recibido_Por\n';
+
+      recibos.forEach(r => {
+        const fila = [
+          `"${r.numero}"`,
+          `"${r.fecha}"`,
+          `"${r.cliente.replace(/"/g, '""')}"`,
+          r.monto,
+          `"${r.tipoPago}"`,
+          `"${(r.chequeNo || r.bancoDirecto || '').replace(/"/g, '""')}"`,
+          `"${(r.concepto || '').replace(/"/g, '""')}"`,
+          `"${(r.entregadoPor || '').replace(/"/g, '""')}"`,
+          `"${(r.recibidoPor || '').replace(/"/g, '""')}"`
+        ];
+        csv += fila.join(',') + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Recibos_Export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // COPIA DE SEGURIDAD (JSON)
+    function exportarCopiaSeguridad() {
+      if (recibos.length === 0) {
+        alert('No hay recibos guardados para respaldar.');
+        return;
+      }
+      const json = JSON.stringify(recibos, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Copia_Seguridad_Talonario_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importarCopiaSeguridad(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importados = JSON.parse(e.target.result);
+          if (Array.isArray(importados)) {
+            if (confirm(`Se encontraron ${importados.length} recibos en el archivo. ¿Deseas importarlos?`)) {
+              recibos = importados;
+              guardarEnLocalStorage();
+              renderHistorial();
+              alert('✅ Datos restaurados exitosamente.');
+            }
+          } else {
+            alert('El archivo no tiene el formato correcto.');
+          }
+        } catch (err) {
+          alert('Error al leer el archivo de respaldo.');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // DESCARGA EN PDF CON HTML2PDF
+    function descargarPDF() {
+      const num = document.getElementById('inputNumero').value || 'recibo';
+      const cliente = (document.getElementById('inputRecibidoDe').value || 'cliente').replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `Recibo_${num}_${cliente}.pdf`;
+
+      const element = document.getElementById('printArea');
+      
+      const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+      };
+
+      // Notificación visual de carga
+      const btn = event.currentTarget || document.activeElement;
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) btn.innerHTML = '⏳ Generando PDF...';
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        if (btn) btn.innerHTML = originalText;
+      }).catch(err => {
+        console.error('Error al generar PDF:', err);
+        if (btn) btn.innerHTML = originalText;
+        alert('Se descargará mediante la opción de impresión del navegador.');
+        window.print();
+      });
+    }
+
+    function descargarPDFDirecto(id) {
+      cargarRecibo(id);
+      setTimeout(() => {
+        descargarPDF();
+      }, 300);
+    }
+
+    // IMPRESIÓN DIRECTA DEL NAVEGADOR (Ctrl+P)
+    function imprimirRecibo() {
+      window.print();
+    }
+
+    function scrollToHistory() {
+      document.getElementById('historialSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+@echo off
+echo Abriendo el Talonario de Recibos Digital...
+start "" "%~dp0index.html"
