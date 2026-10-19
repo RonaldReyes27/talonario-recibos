@@ -1,23 +1,36 @@
 /**
  * ========================================================
  * TALONARIO DE RECIBOS DIGITAL - LÓGICA DE APLICACIÓN
+ * Base de datos: Firebase Firestore (sincronización en la nube)
  * ========================================================
  */
 
-// CLAVE DE LOCALSTORAGE
-const STORAGE_KEY = 'talonario_recibos_guardados_v2';
+// ─── CONFIGURACIÓN FIREBASE ─────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCqf9uNu3OPZqkQa8FRa-M6YNxfVjmUKIo",
+  authDomain: "talonario-recibos.firebaseapp.com",
+  projectId: "talonario-recibos",
+  storageBucket: "talonario-recibos.firebasestorage.app",
+  messagingSenderId: "920281447594",
+  appId: "1:920281447594:web:f57ced5f4df343345f64d3"
+};
 
-// ESTADO GLOBAL
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const COLECCION = 'recibos';
+
+// ─── ESTADO GLOBAL ───────────────────────────────────────
 let recibos = [];
 let reciboActualId = null;
-let guardandoRecibo = false; // Bandera para evitar doble guardado
+let guardandoRecibo = false;
 let monedaActual = 'DOP'; // 'DOP' o 'USD'
+let unsubscribeListener = null; // Listener en tiempo real de Firestore
 
 // INICIALIZACIÓN AL CARGAR LA PÁGINA
 document.addEventListener('DOMContentLoaded', () => {
-  cargarRecibosDesdeStorage();
   inicializarFormulario();
   configurarListeners();
+  iniciarListenerFirestore(); // Escucha cambios en tiempo real
 });
 
 /**
@@ -491,7 +504,7 @@ function obtenerSiguienteNumeroRecibo() {
  * GUARDAR RECIBO (CON CONTROL ANTI-DUPLICADOS Y VALIDACIONES)
  * ========================================================
  */
-function guardarRecibo() {
+async function guardarRecibo() {
   // Prevenir guardado múltiple por clics repetidos
   if (guardandoRecibo) {
     return;
@@ -556,8 +569,9 @@ function guardarRecibo() {
     }
   }
 
+  const ahora = new Date().toISOString();
   const receiptData = {
-    id: reciboActualId || 'rec_' + Date.now(),
+    id: reciboActualId || null,
     numero: numeroFinal,
     fecha: fecha,
     moneda: monedaActual,
@@ -571,27 +585,22 @@ function guardarRecibo() {
     bancoDirecto: bancoDirecto,
     entregadoPor: entregadoPor,
     recibidoPor: recibidoPor,
-    updatedAt: new Date().toISOString()
+    updatedAt: ahora,
+    createdAt: reciboActualId ? (recibos.find(r => r.id === reciboActualId)?.createdAt || ahora) : ahora
   };
 
-  if (reciboActualId) {
-    const index = recibos.findIndex(r => r.id === reciboActualId);
-    if (index !== -1) {
-      recibos[index] = receiptData;
-    }
-    mostrarToast(`✅ Recibo #${numeroFinal} actualizado exitosamente.`);
-  } else {
-    recibos.unshift(receiptData);
-    reciboActualId = receiptData.id;
-    mostrarToast(`✅ Recibo #${numeroFinal} guardado exitosamente.`);
+  try {
+    await guardarEnFirestore(receiptData);
+    const accion = receiptData.id ? 'actualizado' : 'guardado';
+    mostrarToast(`✅ Recibo #${numeroFinal} ${accion} en la base de datos.`);
+    document.getElementById('formReceiptTag').innerHTML = `Guardado (#<span>${numeroFinal}</span>)`;
+    sincronizarVistaPrevia();
+  } catch (err) {
+    alert('⚠️ Error al guardar en la base de datos. Verifica tu conexión a internet.');
+    desbloquearBotonGuardar();
+    return;
   }
 
-  guardarEnLocalStorage();
-  renderHistorial();
-  
-  // Mantener los datos en pantalla para que el usuario pueda descargarlo o imprimirlo
-  document.getElementById('formReceiptTag').innerHTML = `Guardado (#<span>${numeroFinal}</span>)`;
-  sincronizarVistaPrevia();
   desbloquearBotonGuardar();
 }
 
@@ -707,20 +716,23 @@ function duplicarRecibo(id) {
 }
 
 /**
- * Eliminar recibo con confirmación
+ * Eliminar recibo con confirmación (elimina de Firestore)
  */
-function eliminarRecibo(id) {
+async function eliminarRecibo(id) {
   const r = recibos.find(item => item.id === id);
   if (!r) return;
 
-  if (confirm(`¿Estás seguro de que deseas eliminar el Recibo #${r.numero} de ${r.cliente}?`)) {
-    recibos = recibos.filter(item => item.id !== id);
-    guardarEnLocalStorage();
-    renderHistorial();
-    if (reciboActualId === id) {
-      limpiarFormulario();
+  if (confirm(`¿Estás seguro de que deseas eliminar el Recibo #${r.numero} de ${r.cliente}?\n\nEsta acción es permanente y no se puede deshacer.`)) {
+    try {
+      await eliminarDeFirestore(id);
+      if (reciboActualId === id) {
+        limpiarFormulario();
+      }
+      mostrarToast(`🗑️ Recibo #${r.numero} eliminado de la base de datos.`);
+    } catch (err) {
+      console.error('Error al eliminar:', err);
+      alert('❌ Error al eliminar el recibo. Verifica tu conexión.');
     }
-    mostrarToast(`🗑️ Recibo #${r.numero} eliminado.`);
   }
 }
 
@@ -879,32 +891,78 @@ function exportarExcelProfesional() {
 
 /**
  * ========================================================
- * STORAGE LOCAL Y HISTORIAL
+ * FIREBASE FIRESTORE - SINCRONIZACIÓN EN TIEMPO REAL
+ * Los datos se guardan en la nube y sincronizan en cualquier PC
  * ========================================================
  */
-function guardarEnLocalStorage() {
+
+/**
+ * Inicia un listener en tiempo real que actualiza la lista
+ * automáticamente cuando se guarda o elimina un recibo desde
+ * CUALQUIER computadora o dispositivo.
+ */
+function iniciarListenerFirestore() {
+  // Mostrar indicador de carga
+  mostrarToast('☁️ Conectando con la base de datos...');
+
+  if (unsubscribeListener) unsubscribeListener();
+
+  unsubscribeListener = db.collection(COLECCION)
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(
+      (snapshot) => {
+        recibos = snapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id
+        }));
+        renderHistorial();
+        // Actualizar número siguiente al cargar
+        const sig = obtenerSiguienteNumeroRecibo();
+        const inputNum = document.getElementById('inputNumero');
+        if (inputNum && !reciboActualId) {
+          inputNum.value = sig;
+          document.getElementById('receiptNumberDisplay').textContent = sig;
+        }
+        sincronizarVistaPrevia();
+        mostrarToast('✅ Base de datos conectada y sincronizada.');
+      },
+      (error) => {
+        console.error('Error en listener Firestore:', error);
+        mostrarToast('❌ Error de conexión con la base de datos. Verifica tu internet.');
+      }
+    );
+}
+
+/**
+ * Guarda o actualiza un recibo en Firestore (nube)
+ */
+async function guardarEnFirestore(receiptData) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(recibos));
-  } catch (e) {
-    console.error('Error guardando en localStorage', e);
+    if (reciboActualId && receiptData.id === reciboActualId) {
+      // Actualizar documento existente
+      await db.collection(COLECCION).doc(reciboActualId).set(receiptData);
+    } else {
+      // Crear nuevo documento con ID automático
+      const docRef = await db.collection(COLECCION).add(receiptData);
+      reciboActualId = docRef.id;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error guardando en Firestore:', error);
+    throw error;
   }
 }
 
+/**
+ * Elimina un recibo de Firestore (nube)
+ */
+async function eliminarDeFirestore(id) {
+  await db.collection(COLECCION).doc(id).delete();
+}
+
 function cargarRecibosDesdeStorage() {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-      recibos = JSON.parse(data);
-    } else {
-      const dataV1 = localStorage.getItem('talonario_recibos_guardados_v1');
-      if (dataV1) {
-        recibos = JSON.parse(dataV1);
-        guardarEnLocalStorage();
-      }
-    }
-  } catch (e) {
-    recibos = [];
-  }
+  // Función legacy mantenida por compatibilidad — ya no se usa,
+  // los datos vienen de Firestore vía iniciarListenerFirestore()
   renderHistorial();
 }
 
@@ -1026,22 +1084,33 @@ function importarCopiaSeguridad(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const importados = JSON.parse(e.target.result);
       if (Array.isArray(importados)) {
-        if (confirm(`Se encontraron ${importados.length} recibos en el archivo. ¿Deseas importarlos?`)) {
-          recibos = importados;
-          guardarEnLocalStorage();
-          renderHistorial();
+        if (confirm(`Se encontraron ${importados.length} recibos en el archivo.\n¿Deseas subirlos a la base de datos en la nube?`)) {
+          mostrarToast('⏳ Subiendo recibos a la nube...');
+          const batch = db.batch();
+          importados.forEach(r => {
+            const ahora = new Date().toISOString();
+            const docRef = db.collection(COLECCION).doc(); // ID automático
+            batch.set(docRef, {
+              ...r,
+              id: docRef.id,
+              createdAt: r.createdAt || ahora,
+              updatedAt: ahora
+            });
+          });
+          await batch.commit();
           limpiarFormulario();
-          mostrarToast('✅ Datos restaurados exitosamente.');
+          mostrarToast(`✅ ${importados.length} recibos restaurados en la base de datos.`);
         }
       } else {
         alert('El archivo no tiene el formato correcto.');
       }
     } catch (err) {
-      alert('Error al leer el archivo de respaldo.');
+      console.error('Error al importar:', err);
+      alert('Error al leer o subir el archivo de respaldo.');
     }
   };
   reader.readAsText(file);
