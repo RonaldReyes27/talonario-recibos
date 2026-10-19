@@ -33,32 +33,46 @@
   transition: all 0.2s ease-in-out;
 }
 
-/* Líneas continuas de escritura */
-.receipt-line {
-  border-bottom: 1.5px solid var(--receipt-blue);
-  flex-grow: 1;
-  min-height: 26px;
+/* ========================================================
+   LÍNEAS DE ESCRITURA Y ALINEACIÓN DE TEXTO
+   Configurado con padding-bottom para que las letras se
+   posicionen SIEMPRE por encima de la línea y nunca la atraviesen
+   ======================================================== */
+
+.receipt-row {
   display: flex;
   align-items: flex-end;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.receipt-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--receipt-blue);
+  white-space: nowrap;
+  margin-right: 8px;
+  line-height: 1.2;
+  padding-bottom: 4px;
+}
+
+.receipt-line {
+  flex-grow: 1;
+  border-bottom: 1.5px solid var(--receipt-blue);
+  min-height: 24px;
   padding-left: 8px;
   padding-right: 8px;
-  font-weight: 600;
+  padding-bottom: 4px;
+  font-weight: 700;
   font-size: 14px;
+  line-height: 1.2;
   color: #0b1938;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   overflow: hidden;
   white-space: nowrap;
-}
-
-.payment-line {
-  border-bottom: 1.2px solid var(--receipt-blue);
-  flex-grow: 1;
-  min-height: 16px;
-  display: inline-block;
-  padding-left: 4px;
-  color: #0b1938;
-  font-weight: 600;
+  box-sizing: border-box;
 }
 
 /* Caja de Monto Numérico Sombreado */
@@ -67,7 +81,7 @@
   border: 1.5px solid var(--receipt-blue);
   border-radius: 8px;
   padding: 4px 14px;
-  min-width: 190px;
+  min-width: 180px;
   height: 38px;
   display: flex;
   align-items: center;
@@ -76,6 +90,7 @@
   font-weight: 800;
   letter-spacing: 1px;
   color: var(--receipt-blue);
+  box-sizing: border-box;
 }
 
 /* Cuadro Superior de Fecha (DIA | MES | AÑO) */
@@ -127,8 +142,38 @@
   border-radius: 4px;
   padding: 6px 10px;
   width: 250px;
+  box-sizing: border-box;
+}
+
+.payment-row {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 6px;
   font-size: 11px;
   font-weight: 700;
+  color: var(--receipt-blue);
+}
+
+.payment-label {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  margin-right: 4px;
+  line-height: 1.2;
+  padding-bottom: 2px;
+}
+
+.payment-line {
+  flex-grow: 1;
+  border-bottom: 1.2px solid var(--receipt-blue);
+  min-height: 18px;
+  padding-left: 6px;
+  padding-bottom: 2px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #0b1938;
+  font-weight: 700;
+  box-sizing: border-box;
 }
 
 .custom-checkbox {
@@ -139,15 +184,34 @@
   align-items: center;
   justify-content: center;
   margin-right: 6px;
+  margin-bottom: 2px;
   border-radius: 2px;
   font-size: 11px;
   font-weight: 800;
+  flex-shrink: 0;
 }
 
 /* Líneas de Firma */
+.signature-box {
+  text-align: center;
+  width: 165px;
+}
+
+.signature-name {
+  height: 22px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  font-style: italic;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+
 .signature-line {
   border-top: 1.5px solid var(--receipt-blue);
-  width: 165px;
+  width: 100%;
   text-align: center;
   font-size: 11px;
   font-weight: 700;
@@ -167,7 +231,7 @@
   letter-spacing: 2px;
 }
 
-/* Modal y Toast de Notificación */
+/* Notificación Toast */
 .toast-notification {
   position: fixed;
   bottom: 24px;
