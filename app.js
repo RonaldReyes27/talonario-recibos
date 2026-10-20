@@ -53,7 +53,7 @@ function configurarListeners() {
     'inputNumero', 'inputFecha', 'inputRecibidoDe', 
     'inputMonto', 'inputMontoLetras', 'inputConcepto',
     'inputChequeNo', 'inputChequeBanco', 'inputBancoDirecto',
-    'inputEntregadoPor', 'inputRecibidoPor'
+    'inputFirmaResponsable'
   ];
 
   inputs.forEach(id => {
@@ -370,10 +370,8 @@ function sincronizarVistaPrevia() {
     }
 
     // Firmas
-    const pEntregado = document.getElementById('previewEntregadoNombre');
-    const pRecibido = document.getElementById('previewRecibidoNombre');
-    if (pEntregado) pEntregado.textContent = document.getElementById('inputEntregadoPor').value || '';
-    if (pRecibido) pRecibido.textContent = document.getElementById('inputRecibidoPor').value || '';
+    const pResponsable = document.getElementById('previewFirmaResponsable');
+    if (pResponsable) pResponsable.textContent = document.getElementById('inputFirmaResponsable').value || '';
 
     // Sincronizar copia si está activa
     actualizarCopiaPreview();
@@ -398,8 +396,7 @@ function limpiarFormulario() {
   document.getElementById('inputChequeNo').value = '';
   document.getElementById('inputChequeBanco').value = '';
   document.getElementById('inputBancoDirecto').value = '';
-  document.getElementById('inputEntregadoPor').value = '';
-  document.getElementById('inputRecibidoPor').value = '';
+  document.getElementById('inputFirmaResponsable').value = '';
 
   // Restablecer forma de pago a Efectivo
   document.querySelectorAll('input[name="tipoPago"]').forEach(rd => rd.checked = false);
@@ -426,8 +423,7 @@ function limpiarFormulario() {
   document.getElementById('previewEfectivoVal').textContent = '';
   document.getElementById('previewChequeNoVal').textContent = '';
   document.getElementById('previewBancoVal').textContent = '';
-  document.getElementById('previewEntregadoNombre').textContent = '';
-  document.getElementById('previewRecibidoNombre').textContent = '';
+  document.getElementById('previewFirmaResponsable').textContent = '';
   const SVG_CHECK = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="#142852" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:auto;"><polyline points="3 8 6.5 12 13 4"></polyline></svg>`;
   document.getElementById('checkEfectivoIcon').innerHTML = SVG_CHECK;
   document.getElementById('checkChequeIcon').innerHTML = '';
@@ -523,8 +519,7 @@ async function guardarRecibo() {
   const chequeNo = document.getElementById('inputChequeNo').value.trim();
   const chequeBanco = document.getElementById('inputChequeBanco').value.trim();
   const bancoDirecto = document.getElementById('inputBancoDirecto').value.trim();
-  const entregadoPor = document.getElementById('inputEntregadoPor').value.trim();
-  const recibidoPor = document.getElementById('inputRecibidoPor').value.trim();
+  const firmaResponsable = document.getElementById('inputFirmaResponsable').value.trim();
 
   // Validaciones
   if (!cliente) {
@@ -583,8 +578,7 @@ async function guardarRecibo() {
     chequeNo: chequeNo,
     chequeBanco: chequeBanco,
     bancoDirecto: bancoDirecto,
-    entregadoPor: entregadoPor,
-    recibidoPor: recibidoPor,
+    firmaResponsable: firmaResponsable,
     updatedAt: ahora,
     createdAt: reciboActualId ? (recibos.find(r => r.id === reciboActualId)?.createdAt || ahora) : ahora
   };
@@ -666,8 +660,7 @@ function cargarRecibo(id) {
   document.getElementById('inputChequeNo').value = r.chequeNo || '';
   document.getElementById('inputChequeBanco').value = r.chequeBanco || '';
   document.getElementById('inputBancoDirecto').value = r.bancoDirecto || '';
-  document.getElementById('inputEntregadoPor').value = r.entregadoPor || '';
-  document.getElementById('inputRecibidoPor').value = r.recibidoPor || '';
+  document.getElementById('inputFirmaResponsable').value = r.firmaResponsable || r.recibidoPor || r.entregadoPor || '';
 
   document.getElementById('formReceiptTag').innerHTML = `Editando #<span>${r.numero}</span>`;
   
@@ -697,8 +690,7 @@ function duplicarRecibo(id) {
 
   document.getElementById('inputMontoLetras').value = r.montoLetras || '';
   document.getElementById('inputConcepto').value = r.concepto || '';
-  document.getElementById('inputEntregadoPor').value = r.entregadoPor || '';
-  document.getElementById('inputRecibidoPor').value = r.recibidoPor || '';
+  document.getElementById('inputFirmaResponsable').value = r.firmaResponsable || r.recibidoPor || r.entregadoPor || '';
 
   let tipoPago = (r.tipoPago || 'efectivo').toLowerCase();
   if (tipoPago.includes('transf') || tipoPago.includes('banc')) tipoPago = 'banco';
@@ -860,8 +852,7 @@ function exportarExcelProfesional() {
     'Concepto / Detalle': r.concepto || '',
     'Forma de Pago': (r.tipoPago || '').toUpperCase(),
     'Referencia / Banco': r.chequeNo ? `Cheque #${r.chequeNo} (${r.chequeBanco || ''})` : (r.bancoDirecto || 'Efectivo'),
-    'Entregado Por': r.entregadoPor || '',
-    'Recibido Por': r.recibidoPor || ''
+    'Firma Responsable': r.firmaResponsable || r.recibidoPor || r.entregadoPor || ''
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(filas);
@@ -877,8 +868,7 @@ function exportarExcelProfesional() {
     { wch: 40 }, // Concepto
     { wch: 16 }, // Forma de Pago
     { wch: 25 }, // Referencia
-    { wch: 22 }, // Entregado Por
-    { wch: 22 }  // Recibido Por
+    { wch: 22 }  // Firma Responsable
   ];
 
   const workbook = XLSX.utils.book_new();

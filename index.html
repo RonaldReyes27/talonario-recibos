@@ -177,15 +177,9 @@
           </div>
 
           <!-- Firmas -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Entregado por (Opcional)</label>
-              <input type="text" id="inputEntregadoPor" placeholder="Nombre de quien entrega" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Recibido por (Opcional)</label>
-              <input type="text" id="inputRecibidoPor" placeholder="Nombre de quien recibe" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Firma Responsable (Opcional)</label>
+            <input type="text" id="inputFirmaResponsable" placeholder="Nombre del responsable" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
           </div>
 
           <!-- Botones de Acción -->
@@ -338,15 +332,11 @@
                 </div>
               </div>
 
-              <!-- Firmas: Entregado por / Recibido por -->
-              <div class="flex gap-8 mb-1">
+              <!-- Firma Responsable -->
+              <div class="mb-1">
                 <div class="signature-box">
-                  <div class="signature-name" id="previewEntregadoNombre"></div>
-                  <div class="signature-line">ENTREGADO POR</div>
-                </div>
-                <div class="signature-box">
-                  <div class="signature-name" id="previewRecibidoNombre"></div>
-                  <div class="signature-line">RECIBIDO POR</div>
+                  <div class="signature-name" id="previewFirmaResponsable"></div>
+                  <div class="signature-line">FIRMA RESPONSABLE</div>
                 </div>
               </div>
 
